@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Posse — Vereador Wildfran</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <style>
+        :root {
+            --laranja: #FF8500;
+            --laranja-claro: #FFB347;
+            --azul: #0047AB;
+            --azul-escuro: #002f7a;
+            --amarelo: #FDB913;
+            --branco: #FFFFFF;
+            --fundo: #FFF8F0;
+            --cinza-texto: #444;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--fundo);
+            color: var(--cinza-texto);
+            overflow-x: hidden;
+        }
+
+        /* ── WELCOME OVERLAY (Garante o Autoplay) ── */
+        .welcome-overlay {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(170deg, var(--azul-escuro) 0%, var(--azul) 45%, var(--laranja) 100%);
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 40px;
+            padding: 44px 24px 56px;
+            transition: opacity 0.6s ease, visibility 0.6s ease;
+            overflow: hidden;
+            text-align: center;
+        }
+        
+        .welcome-overlay::before {
+            content: '';
+            position: absolute;
+            top: -120px; right: -120px;
+            width: 380px; height: 380px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,133,0,0.35) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        
+        .welcome-overlay::after {
+            content: '';
+            position: absolute;
+            bottom: -80px; left: -80px;
+            width: 260px; height: 260px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(253,185,19,0.25) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .welcome-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+        
+        .btn-abrir-convite {
+            background: linear-gradient(135deg, var(--laranja), var(--amarelo));
+            color: white;
+            border: none;
+            padding: 18px 32px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            font-family: 'Outfit', sans-serif;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(255,133,0,0.4);
+            transition: transform 0.2s;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .btn-abrir-convite:active {
+            transform: scale(0.95);
+        }
+
+        /* ── HERO ── */
+        .hero {
+            position: relative;
+            min-height: 100svh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 40px;
+            text-align: center;
+            padding: 44px 24px 56px;
+            overflow: hidden;
+            background: linear-gradient(170deg, var(--azul-escuro) 0%, var(--azul) 45%, var(--laranja) 100%);
+        }
+
+        /* Geometric accent circles */
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -120px; right: -120px;
+            width: 380px; height: 380px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,133,0,0.35) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: -80px; left: -80px;
+            width: 260px; height: 260px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(253,185,19,0.25) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        /* Diagonal stripe overlay */
+        .hero-stripe {
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(
+                -45deg,
+                transparent,
+                transparent 30px,
+                rgba(255,255,255,0.018) 30px,
+                rgba(255,255,255,0.018) 60px
+            );
+            pointer-events: none;
+        }
+
+        .logo-wrapper {
+            position: relative;
+            z-index: 2;
+            opacity: 0;
+            animation: fadeDown 0.8s 0.2s ease forwards;
+        }
+
+        .logo-wrapper img {
+            height: 80px;
+            width: auto;
+            filter: drop-shadow(0 4px 14px rgba(0,0,0,0.45));
+        }
+
+        /* Photo stack */
+        .hero-photo-stack {
+            position: relative;
+            width: 320px;
+            height: 320px;
+            z-index: 2;
+            opacity: 0;
+            animation: scaleIn 0.9s 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
+            flex-shrink: 0;
+        }
+
+        .hero-photo-stack .ring {
+            position: absolute;
+            inset: -10px;
+            border-radius: 50%;
+            border: 3px solid var(--amarelo);
+            opacity: 0.6;
+            animation: spinRing 10s linear infinite;
+        }
+        .hero-photo-stack .ring2 {
+            inset: -20px;
+            border-color: rgba(255,133,0,0.4);
+            border-style: dashed;
+            animation: spinRing 14s linear infinite reverse;
+        }
+
+        .hero-photo-stack img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            object-position: top center;
+            border: 5px solid white;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+        }
+
+        /* Badge */
+        .hero-badge {
+            position: absolute;
+            bottom: -10px;
+            right: -5px;
+            background: var(--amarelo);
+            color: var(--azul-escuro);
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 5px 10px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: var(--amarelo);
+            margin-bottom: 8px;
+            opacity: 0;
+            animation: fadeUp 0.7s 0.7s ease forwards;
+        }
+
+        .hero-logo-bottom {
+            z-index: 2;
+            opacity: 0;
+            animation: fadeUp 0.7s 0.85s ease forwards;
+        }
+
+        .hero-logo-bottom img {
+            height: 72px;
+            width: auto;
+            filter: drop-shadow(0 4px 16px rgba(0,0,0,0.5)) brightness(1.1);
+        }
+
+        .hero-subtitle {
+            font-size: 1rem;
+            color: rgba(255,255,255,0.8);
+            margin: 10px 0 20px;
+            font-weight: 300;
+            opacity: 0;
+            animation: fadeUp 0.7s 1s ease forwards;
+        }
+
+        .hero-scroll-hint {
+            position: absolute;
+            bottom: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255,255,255,0.5);
+            font-size: 0.7rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            animation: bounceY 2s 2s ease-in-out infinite;
+        }
+
+        /* ── SECTION WRAPPER ── */
+        .section {
+            padding: 48px 24px;
+        }
+
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.7rem;
+            font-weight: 700;
+            color: var(--azul);
+            margin-bottom: 6px;
+        }
+
+        .section-line {
+            width: 48px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--laranja), var(--amarelo));
+            border-radius: 2px;
+            margin-bottom: 24px;
+        }
+
+        /* ── INVITE CARD ── */
+        .invite-card {
+            background: white;
+            border-radius: 24px;
+            padding: 32px 24px;
+            margin: 0 16px;
+            box-shadow: 0 12px 40px rgba(0,47,122,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .invite-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, var(--azul), var(--laranja), var(--amarelo));
+        }
+
+        .invite-text {
+            font-size: 1.05rem;
+            color: #555;
+            line-height: 1.7;
+            margin-bottom: 20px;
+            text-align: justify;
+        }
+
+        .invite-highlight {
+            background: linear-gradient(135deg, var(--azul) 0%, var(--azul-escuro) 100%);
+            color: white;
+            border-radius: 14px;
+            padding: 18px 20px;
+            font-size: 1.15rem;
+            font-weight: 600;
+            line-height: 1.5;
+            box-shadow: 0 8px 24px rgba(0,47,122,0.25);
+            text-align: justify;
+        }
+
+        .invite-highlight em {
+            color: var(--amarelo);
+            font-style: normal;
+        }
+
+        /* ── DATE/INFO CARDS ── */
+        .info-section {
+            background: linear-gradient(135deg, var(--azul-escuro) 0%, var(--azul) 100%);
+            padding: 48px 24px;
+        }
+
+        .info-section .section-title { color: white; }
+
+        .info-card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 22px 20px;
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            margin-bottom: 14px;
+            transition: transform 0.25s ease, background 0.25s ease;
+        }
+
+        .info-card:active { transform: scale(0.98); }
+
+        .info-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: rgba(255,133,0,0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 1.3rem;
+            color: var(--amarelo);
+        }
+
+        .info-card-text h3 {
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.55);
+            margin-bottom: 4px;
+        }
+
+        .info-card-text p {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: white;
+            line-height: 1.2;
+        }
+
+        .info-card-text small {
+            font-size: 0.8rem;
+            font-weight: 300;
+            color: rgba(255,255,255,0.6);
+        }
+
+        /* ── SECOND PHOTO ── */
+        .photo2-section {
+            padding: 32px 24px;
+            text-align: center;
+        }
+
+        .photo2-frame {
+            position: relative;
+            display: inline-block;
+            margin: 0 auto;
+        }
+
+        .photo2-frame img {
+            width: 100%;
+            max-width: 340px;
+            height: 340px;
+            object-fit: cover;
+            object-position: top center;
+            border-radius: 24px;
+            display: block;
+            box-shadow: 0 20px 50px rgba(0,47,122,0.2);
+        }
+
+        .photo2-frame::before {
+            content: '';
+            position: absolute;
+            inset: -6px;
+            border-radius: 28px;
+            background: linear-gradient(135deg, var(--laranja), var(--amarelo), var(--azul));
+            z-index: -1;
+            opacity: 0.7;
+        }
+
+        .photo2-caption {
+            margin-top: 16px;
+            font-size: 0.85rem;
+            color: #888;
+            font-style: italic;
+        }
+
+        /* ── ACTION BUTTONS ── */
+        .actions-section {
+            padding: 40px 24px 20px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 18px 22px;
+            border-radius: 16px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            margin-bottom: 14px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: white;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .btn:active { transform: scale(0.96); }
+        .btn:active::after { opacity: 0.08; }
+
+        .btn-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.18);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+
+        .btn-text { flex: 1; text-align: left;}
+        .btn-text span { display: block; font-size: 0.72rem; font-weight: 400; opacity: 0.75; }
+
+        .btn-arrow {
+            font-size: 0.85rem;
+            opacity: 0.6;
+        }
+
+        /* Button variants */
+        .btn-youtube {
+            background: linear-gradient(135deg, #cc0000, #FF0000);
+            color: white;
+            box-shadow: 0 8px 24px rgba(204,0,0,0.35);
+        }
+
+        .btn-gps {
+            background: linear-gradient(135deg, var(--azul-escuro), var(--azul));
+            color: white;
+            box-shadow: 0 8px 24px rgba(0,47,122,0.35);
+        }
+
+        .btn-music {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: white;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+
+        .btn-music.playing .btn-icon { animation: pulse 1.2s ease-in-out infinite; }
+
+        /* ── CONFIRM BUTTON ── */
+        .confirm-section {
+            padding: 8px 24px 48px;
+        }
+
+        .btn-confirm {
+            background: linear-gradient(135deg, #11a75c, #0dce72);
+            color: white;
+            box-shadow: 0 10px 30px rgba(13,206,114,0.4);
+            padding: 22px 22px;
+            font-size: 1.1rem;
+        }
+
+        .btn-confirm.confirmed {
+            background: linear-gradient(135deg, #0a7a42, #0fa85c);
+            box-shadow: 0 8px 20px rgba(10,122,66,0.4);
+        }
+
+        /* Confetti dots */
+        .confetti-burst {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        .confetti-dot {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: confettiFly 1s ease-out forwards;
+        }
+
+        /* ── MUSIC PLAYER BAR ── */
+        .music-bar {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+            z-index: 100;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .music-bar.visible { transform: translateY(0); }
+
+        .music-bar-thumb {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--laranja), var(--amarelo));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            color: white;
+            animation: spinRecord 3s linear infinite paused;
+        }
+
+        .music-bar.playing .music-bar-thumb { animation-play-state: running; }
+
+        .music-bar-info { flex: 1; }
+        .music-bar-info strong { display: block; color: white; font-size: 0.9rem; }
+        .music-bar-info small { color: rgba(255,255,255,0.5); font-size: 0.75rem; }
+
+        .music-bar-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.12);
+            border: none;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s, transform 0.15s;
+        }
+
+        .music-bar-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.22); }
+
+        .music-bar-close {
+            font-size: 0.8rem;
+            opacity: 0.5;
+        }
+
+        /* ── PROGRESS BAR ── */
+        .music-progress {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: rgba(255,255,255,0.15);
+        }
+        .music-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--laranja), var(--amarelo));
+            width: 0%;
+            transition: width 0.5s linear;
+        }
+
+        /* ── FOOTER ── */
+        footer {
+            background: var(--azul-escuro);
+            padding: 40px 24px 50px;
+            text-align: center;
+        }
+
+        .footer-logo img {
+            height: 60px;
+            width: auto;
+            opacity: 0.85;
+            margin-bottom: 16px;
+        }
+
+        .footer-name {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.6rem;
+            font-weight: 900;
+            color: white;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .footer-tag {
+            font-size: 0.75rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--amarelo);
+            margin-bottom: 20px;
+        }
+
+        .footer-divider {
+            width: 48px;
+            height: 2px;
+            background: var(--laranja);
+            margin: 16px auto;
+            border-radius: 2px;
+        }
+
+        .footer-msg {
+            color: rgba(255,255,255,0.55);
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        /* ── ANIMATIONS ── */
+        @keyframes fadeDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.6); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+        @keyframes spinRing {
+            to { transform: rotate(360deg); }
+        }
+        @keyframes bounceY {
+            0%,100% { transform: translateX(-50%) translateY(0); }
+            50%      { transform: translateX(-50%) translateY(8px); }
+        }
+        @keyframes pulse {
+            0%,100% { transform: scale(1); }
+            50%      { transform: scale(1.2); }
+        }
+        @keyframes spinRecord {
+            to { transform: rotate(360deg); }
+        }
+        @keyframes confettiFly {
+            0%   { opacity: 1; transform: translate(0,0) scale(1); }
+            100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0.3); }
+        }
+
+        /* Scroll reveal */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .reveal-delay-1 { transition-delay: 0.1s; }
+        .reveal-delay-2 { transition-delay: 0.2s; }
+        .reveal-delay-3 { transition-delay: 0.3s; }
+
+        /* Notification toast */
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: #1a1a2e;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            z-index: 999;
+            transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+            white-space: nowrap;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); }
+    </style>
+</head>
+<body>
+
+    <!-- OVERLAY DE BOAS-VINDAS (Para forçar a interação do usuário e iniciar a música) -->
+    <div id="welcomeOverlay" class="welcome-overlay">
+        <div class="hero-stripe"></div>
+        
+        <!-- FOTO CENTRAL MAIOR (Mesmo layout do Hero) -->
+        <div class="hero-photo-stack">
+            <div class="ring"></div>
+            <div class="ring ring2"></div>
+            <img src="foto1.png" alt="Vereador Wildfran" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22320%22><rect width=%22320%22 height=%22320%22 fill=%22%23FF8500%22/><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%22100%22>W</text></svg>'">
+            <div class="hero-badge">✦ Vereador</div>
+        </div>
+
+        <!-- CONTEÚDO INFERIOR -->
+        <div style="z-index: 2; position: relative; animation: fadeUp 0.6s 0.3s ease forwards; opacity: 0; max-width: 400px; width: 100%;">
+            <h2 style="font-family: 'Playfair Display', serif; color: white; font-size: 1.8rem; margin-bottom: 12px; line-height: 1.2;">Você tem um convite especial!</h2>
+            <p style="color: rgba(255,255,255,0.8); font-size: 1.05rem; margin-bottom: 32px;">Clique abaixo para abrir!</p>
+            <button onclick="abrirConvite()" class="btn-abrir-convite" style="max-width: 300px; margin: 0 auto;">
+                Abrir Convite <i class="fa-solid fa-play"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast"></div>
+
+    <!-- HERO -->
+    <header class="hero">
+        <div class="hero-stripe"></div>
+
+        <!-- FOTO CENTRAL MAIOR -->
+        <div class="hero-photo-stack">
+            <div class="ring"></div>
+            <div class="ring ring2"></div>
+            <img src="foto1.png" alt="Vereador Wildfran" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22320%22 height=%22320%22><rect width=%22320%22 height=%22320%22 fill=%22%23FF8500%22/><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%22100%22>W</text></svg>'">
+            <div class="hero-badge">✦ Vereador</div>
+        </div>
+
+        <!-- CONTEÚDO INFERIOR -->
+        <div class="hero-content">
+            <p class="hero-label">Você está convidado</p>
+
+            <!-- LOGO SUBSTITUINDO O NOME -->
+            <div class="hero-logo-bottom">
+                <img src="logo.png" alt="Wildfran" onerror="this.style.display='none'">
+            </div>
+
+            <p class="hero-subtitle">Sessão de Posse — Câmara Municipal</p>
+        </div>
+
+        <div class="hero-scroll-hint">
+            <i class="fa-solid fa-chevron-down"></i>
+            <span>deslize</span>
+        </div>
+    </header>
+
+    <!-- CONVITE -->
+    <section class="section">
+        <div class="reveal">
+            <p class="section-title">O Convite</p>
+            <div class="section-line"></div>
+        </div>
+        <div class="invite-card reveal reveal-delay-1">
+            <p class="invite-text">
+                É com muita felicidade que venho convidar amigos e amigas para a sessão desta quinta-feira.
+            </p>
+            <div class="invite-highlight">
+                <i class="fa-solid fa-star" style="color:var(--amarelo); margin-right:8px;"></i>
+                Nesta quinta-feira, tomaremos posse no cargo de <em>Vereador</em> pela Câmara Municipal de Presidente Dutra.
+            </div>
+        </div>
+    </section>
+
+    <!-- DATA E LOCAL -->
+    <section class="info-section">
+        <div class="reveal">
+            <p class="section-title">Quando e Onde</p>
+            <div class="section-line"></div>
+        </div>
+
+        <div class="info-card reveal reveal-delay-1">
+            <div class="info-icon"><i class="fa-regular fa-calendar-days"></i></div>
+            <div class="info-card-text">
+                <h3>Data</h3>
+                <p>23 de Abril de 2026</p>
+                <small>Quinta-feira · às 9h00</small>
+            </div>
+        </div>
+
+        <div class="info-card reveal reveal-delay-2">
+            <div class="info-icon"><i class="fa-solid fa-building-columns"></i></div>
+            <div class="info-card-text">
+                <h3>Local</h3>
+                <p>Câmara Municipal</p>
+                <small>Presidente Dutra – MA</small>
+            </div>
+        </div>
+
+        <div class="info-card reveal reveal-delay-3">
+            <div class="info-icon"><i class="fa-solid fa-clock"></i></div>
+            <div class="info-card-text">
+                <h3>Horário</h3>
+                <p>09:00</p>
+                <small>Chegue com antecedência</small>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOTO 2 -->
+    <section class="photo2-section reveal">
+        <div class="reveal">
+            <p class="section-title" style="text-align:center;">Nosso Vereador</p>
+            <div class="section-line" style="margin:0 auto 24px;"></div>
+        </div>
+        <div class="photo2-frame reveal reveal-delay-1">
+            <img src="foto2.png" alt="Wildfran Vereador" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22340%22 height=%22340%22><rect width=%22340%22 height=%22340%22 rx=%2224%22 fill=%22%230047AB%22/><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2280%22>W</text></svg>'">
+        </div>
+        <p class="photo2-caption reveal reveal-delay-2">Acredite na mudança!</p>
+    </section>
+
+    <!-- BOTÕES DE AÇÃO -->
+    <section class="actions-section">
+        <div class="reveal">
+            <p class="section-title">Acesse</p>
+            <div class="section-line"></div>
+        </div>
+
+        <a href="https://www.youtube.com/@cmpdmaofc" target="_blank" class="btn btn-youtube reveal reveal-delay-1">
+            <div class="btn-icon"><i class="fa-brands fa-youtube"></i></div>
+            <div class="btn-text">
+                Assistir ao Vivo
+                <span>Canal Câmara Municipal no YouTube</span>
+            </div>
+            <i class="fa-solid fa-arrow-right btn-arrow"></i>
+        </a>
+
+        <button onclick="abrirGPS()" class="btn btn-gps reveal reveal-delay-2">
+            <div class="btn-icon"><i class="fa-solid fa-map-location-dot"></i></div>
+            <div class="btn-text">
+                Ver no Mapa
+                <span>Abrir GPS / Google Maps</span>
+            </div>
+            <i class="fa-solid fa-arrow-right btn-arrow"></i>
+        </button>
+
+        <button onclick="toggleMusica()" id="btnMusica" class="btn btn-music reveal reveal-delay-3">
+            <div class="btn-icon"><i class="fa-solid fa-music"></i></div>
+            <div class="btn-text" id="btnMusicaText">
+                Ouvir Música
+                <span>Toque o hino da campanha</span>
+            </div>
+            <i class="fa-solid fa-play btn-arrow" id="btnMusicaIcon"></i>
+        </button>
+    </section>
+
+    <!-- CONFIRMAÇÃO DE PRESENÇA -->
+    <section class="confirm-section">
+        <div class="reveal">
+            <p class="section-title">Confirme sua Presença</p>
+            <div class="section-line"></div>
+            <p style="color:#666; font-size:0.9rem; margin-bottom:20px;">Sua presença é muito importante para nós! Toque no botão abaixo para confirmar.</p>
+        </div>
+        <button onclick="confirmarPresenca()" id="btnConfirm" class="btn btn-confirm reveal reveal-delay-1">
+            <div class="btn-icon"><i class="fa-solid fa-circle-check" id="confirmIcon"></i></div>
+            <div class="btn-text" id="confirmText">
+                Confirmar Presença
+                <span>Estarei lá na quinta-feira!</span>
+            </div>
+            <i class="fa-solid fa-arrow-right btn-arrow" id="confirmArrow"></i>
+        </button>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="footer-logo">
+            <img src="logo.png" alt="Logo" onerror="this.style.display='none'">
+        </div>
+        <div class="footer-tag">Acredite na mudança</div>
+        <div class="footer-divider"></div>
+        <p class="footer-msg">
+            A sua presença será muito importante<br>para a nossa nova caminhada!<br><br>
+            <strong style="color:rgba(255,255,255,0.8);">Obrigado pelo apoio e carinho de sempre.</strong>
+        </p>
+    </footer>
+
+    <!-- MUSIC BAR -->
+    <div class="music-bar" id="musicBar">
+        <div class="music-progress"><div class="music-progress-fill" id="progressFill"></div></div>
+        <div class="music-bar-thumb"><i class="fa-solid fa-music"></i></div>
+        <div class="music-bar-info">
+            <strong>Wildfran Vereador</strong>
+            <small id="musicTime">0:00 / 0:00</small>
+        </div>
+        <button class="music-bar-btn" onclick="toggleMusica()"><i class="fa-solid fa-play" id="playPauseIcon"></i></button>
+        <button class="music-bar-btn music-bar-close" onclick="fecharMusica()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <script>
+        /* ── SCROLL REVEAL ── */
+        const revealEls = document.querySelectorAll('.reveal');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    e.target.classList.add('visible');
+                    observer.unobserve(e.target);
+                }
+            });
+        }, { threshold: 0.12 });
+        revealEls.forEach(el => observer.observe(el));
+
+        /* ── AUDIO & OVERLAY ── */
+        const audio = new Audio('dfram.mp3');
+        audio.loop = false;
+        let musicStarted = false;
+
+        const musicBar    = document.getElementById('musicBar');
+        const playPauseIcon = document.getElementById('playPauseIcon');
+        const progressFill  = document.getElementById('progressFill');
+        const musicTime     = document.getElementById('musicTime');
+        const btnMusica     = document.getElementById('btnMusica');
+        const btnMusicaText = document.getElementById('btnMusicaText');
+        const btnMusicaIcon = document.getElementById('btnMusicaIcon');
+
+        function fmtTime(s) {
+            const m = Math.floor(s / 60);
+            const ss = Math.floor(s % 60).toString().padStart(2,'0');
+            return `${m}:${ss}`;
+        }
+
+        audio.addEventListener('timeupdate', () => {
+            if (!audio.duration) return;
+            const pct = (audio.currentTime / audio.duration) * 100;
+            progressFill.style.width = pct + '%';
+            musicTime.textContent = `${fmtTime(audio.currentTime)} / ${fmtTime(audio.duration)}`;
+        });
+
+        audio.addEventListener('ended', () => {
+            playPauseIcon.className = 'fa-solid fa-play';
+            musicBar.classList.remove('playing');
+            btnMusicaIcon.className = 'fa-solid fa-play btn-arrow';
+            btnMusicaText.innerHTML = 'Ouvir Música<span>Toque o hino da campanha</span>';
+            btnMusica.classList.remove('playing');
+        });
+
+        /* FUNÇÃO PARA ABRIR O CONVITE E TOCAR A MÚSICA */
+        function abrirConvite() {
+            const overlay = document.getElementById('welcomeOverlay');
+            overlay.classList.add('hidden'); // Oculta a capa
+
+            // Agora o navegador permite tocar porque houve um "clique" do utilizador
+            audio.play().then(() => {
+                musicStarted = true;
+                musicBar.classList.add('visible', 'playing');
+                playPauseIcon.className = 'fa-solid fa-pause';
+                btnMusicaIcon.className = 'fa-solid fa-pause btn-arrow';
+                btnMusicaText.innerHTML = 'Pausar Música<span>Tocando agora...</span>';
+                btnMusica.classList.add('playing');
+            }).catch(() => {
+                showToast('⚠️ Coloque o arquivo dfram.mp3 na mesma pasta');
+            });
+        }
+
+        function toggleMusica() {
+            if (!musicStarted) {
+                musicBar.classList.add('visible');
+                musicStarted = true;
+            }
+            if (audio.paused) {
+                audio.play().catch(() => showToast('⚠️ Coloque o arquivo dfram.mp3 na mesma pasta'));
+                playPauseIcon.className = 'fa-solid fa-pause';
+                musicBar.classList.add('playing');
+                btnMusicaIcon.className = 'fa-solid fa-pause btn-arrow';
+                btnMusicaText.innerHTML = 'Pausar Música<span>Tocando agora...</span>';
+                btnMusica.classList.add('playing');
+            } else {
+                audio.pause();
+                playPauseIcon.className = 'fa-solid fa-play';
+                musicBar.classList.remove('playing');
+                btnMusicaIcon.className = 'fa-solid fa-play btn-arrow';
+                btnMusicaText.innerHTML = 'Ouvir Música<span>Toque o hino da campanha</span>';
+                btnMusica.classList.remove('playing');
+            }
+        }
+
+        function fecharMusica() {
+            audio.pause();
+            audio.currentTime = 0;
+            musicBar.classList.remove('visible', 'playing');
+            musicStarted = false;
+            playPauseIcon.className = 'fa-solid fa-play';
+            btnMusicaIcon.className = 'fa-solid fa-play btn-arrow';
+            btnMusicaText.innerHTML = 'Ouvir Música<span>Toque o hino da campanha</span>';
+            btnMusica.classList.remove('playing');
+        }
+
+        /* ── GPS ── */
+        function abrirGPS() {
+            window.open('https://www.google.com/maps/search/?api=1&query=C%C3%A2mara+Municipal+Presidente+Dutra+MA', '_blank');
+        }
+
+        /* ── CONFIRMAÇÃO ── */
+        let confirmado = false;
+
+        function confirmarPresenca() {
+            if (confirmado) return;
+            confirmado = true;
+
+            const btn = document.getElementById('btnConfirm');
+            const icon = document.getElementById('confirmIcon');
+            const text = document.getElementById('confirmText');
+            const arrow = document.getElementById('confirmArrow');
+
+            btn.classList.add('confirmed');
+            icon.className = 'fa-solid fa-check-double';
+            text.innerHTML = 'Presença Confirmada! 🎉<span>Até quinta-feira, 23 de abril!</span>';
+            arrow.style.display = 'none';
+
+            launchConfetti(btn);
+            showToast('🎉 Presença confirmada! Até quinta-feira!');
+        }
+
+        /* ── CONFETTI ── */
+        function launchConfetti(fromEl) {
+            const colors = ['#FF8500','#FDB913','#0047AB','#2ecc71','#fff'];
+            const rect = fromEl.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+
+            const burst = document.createElement('div');
+            burst.className = 'confetti-burst';
+            burst.style.cssText = `left:${cx}px;top:${cy}px;`;
+            document.body.appendChild(burst);
+
+            for (let i = 0; i < 30; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'confetti-dot';
+                const angle = (Math.PI * 2 / 30) * i;
+                const dist  = 80 + Math.random() * 80;
+                dot.style.cssText = `
+                    background:${colors[i % colors.length]};
+                    --tx:${Math.cos(angle) * dist}px;
+                    --ty:${Math.sin(angle) * dist}px;
+                    animation-delay:${Math.random() * 0.2}s;
+                `;
+                burst.appendChild(dot);
+            }
+
+            setTimeout(() => burst.remove(), 1500);
+        }
+
+        /* ── TOAST ── */
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3500);
+        }
+    </script>
+</body>
+</html>

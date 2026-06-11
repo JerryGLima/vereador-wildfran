@@ -127,21 +127,26 @@
                         imageMimeType = file.type;
                         const reader = new FileReader();
                         reader.onload = (e) => {
-                            const img = new Image();
-                            img.onload = () => {
-                                // Aplica a textura
+                            // CORREÇÃO AQUI: Usamos a Data URL diretamente
+                            const imageDataUrl = e.target.result;
+
+                            // Cria uma imagem temporária apenas para ler a proporção (largura/altura)
+                            const tempImg = new Image();
+                            tempImg.onload = () => {
+                                // Aplica a textura usando a Data URL string
                                 imagePlane.setAttribute('material', {
-                                    src: img,
+                                    src: imageDataUrl, 
                                     transparent: true,
                                     opacity: 0.9
                                 });
-                                // Mantém a proporção real
-                                const aspectRatio = img.width / img.height;
+
+                                // Ajusta a proporção do plano
+                                const aspectRatio = tempImg.width / tempImg.height;
                                 imagePlane.setAttribute('height', '0.4'); // 40cm base
                                 imagePlane.setAttribute('width', (0.4 * aspectRatio).toString());
                                 
                                 this.isImageLoaded = true;
-                                base64ImageString = e.target.result.split(',')[1]; // Pega só o base64 para a IA
+                                base64ImageString = imageDataUrl.split(',')[1]; // Pega só o base64 para a IA
                                 
                                 imageSetupPanel.style.display = 'none';
                                 arControlsPanel.style.display = 'block';
@@ -149,7 +154,8 @@
                                 const arButton = document.querySelector('.a-enter-vr-button');
                                 if (arButton) arButton.style.display = 'block';
                             };
-                            img.src = e.target.result;
+                            // Inicia o carregamento da imagem temporária
+                            tempImg.src = imageDataUrl;
                         };
                         reader.readAsDataURL(file);
                     } else {
@@ -237,7 +243,7 @@
                         if (session) {
                             session.requestReferenceSpace('viewer').then((space) => {
                                 this.viewerSpace = space;
-                                session.requestHitTestSource({ space: this.viewerSpace })
+                               session.requestHitTestSource({ space: this.viewerSpace })
                                     .then((hitTestSource) => { this.xrHitTestSource = hitTestSource; });
                             });
                             session.requestReferenceSpace('local').then((space) => { this.refSpace = space; });
@@ -341,7 +347,7 @@
         <a-plane id="image-plane" 
                  visible="false"
                  rotation="-90 0 0"
-                 material="shader: flat; transparent: true; opacity: 0.9">
+                 material="shader: flat; transparent: true; opacity: 0.9; side: double">
         </a-plane>
 
         <!-- MIRA DE DESENHO (O ponto onde a tinta vai cair) -->

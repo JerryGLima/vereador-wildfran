@@ -3,363 +3,1005 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-    <title>Desenho AR Pro com Gemini - System</title>
-    
+    <title>AR Projector Pro</title>
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+
     <style>
-        body { 
-            margin: 0; 
-            overflow: hidden; 
-            font-family: sans-serif; 
-            background-color: #000; 
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap');
+
+        :root {
+            --ink: #0a0a0a;
+            --surface: rgba(10, 10, 10, 0.92);
+            --surface-light: rgba(28, 28, 30, 0.95);
+            --border: rgba(255,255,255,0.08);
+            --accent: #FF3B00;
+            --accent2: #FFD60A;
+            --text: #F5F5F0;
+            --muted: #888;
+            --track: rgba(255,255,255,0.12);
+            --radius: 14px;
         }
-        
-        #ui-container { 
-            position: absolute; 
-            bottom: 20px; 
-            left: 50%; 
-            transform: translateX(-50%); 
-            z-index: 999; 
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: #000;
+            overflow: hidden;
+            height: 100dvh;
+        }
+
+        /* ── TELA DE ENTRADA ── */
+        #entry-screen {
+            position: fixed;
+            inset: 0;
+            background: var(--ink);
             display: flex;
             flex-direction: column;
             align-items: center;
-            width: 95%;
-            max-width: 400px;
+            justify-content: center;
+            z-index: 9999;
+            padding: 32px 24px;
+            gap: 0;
+        }
+
+        .entry-logo {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.28em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 40px;
+        }
+
+        .entry-title {
+            font-size: clamp(36px, 10vw, 56px);
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1.0;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .entry-title span {
+            color: var(--accent);
+        }
+
+        .entry-sub {
+            font-size: 15px;
+            color: var(--muted);
+            text-align: center;
+            max-width: 300px;
+            line-height: 1.5;
+            margin-bottom: 48px;
+        }
+
+        .drop-zone {
+            width: 100%;
+            max-width: 340px;
+            border: 1.5px dashed rgba(255,255,255,0.2);
+            border-radius: var(--radius);
+            padding: 40px 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            position: relative;
+        }
+
+        .drop-zone:active, .drop-zone.drag-over {
+            border-color: var(--accent);
+            background: rgba(255,59,0,0.06);
+        }
+
+        .drop-icon {
+            font-size: 40px;
+            line-height: 1;
+        }
+
+        .drop-zone p {
+            font-size: 15px;
+            color: var(--text);
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .drop-zone small {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        #file-input { display: none; }
+
+        .entry-start {
+            width: 100%;
+            max-width: 340px;
+            padding: 16px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 16px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: opacity 0.2s;
+        }
+
+        .entry-start:active { opacity: 0.8; }
+        .entry-start.visible { display: flex; }
+
+        .preview-thumb {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 2px solid var(--accent);
+            display: none;
+        }
+        .preview-thumb.visible { display: block; }
+
+        /* ── CENA AR ── */
+        a-scene { display: block; }
+        .a-enter-vr-button { display: none !important; }
+
+        /* ── PAINEL DE CONTROLES AR ── */
+        #ar-ui {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            padding: 0 16px 24px;
+            pointer-events: none;
+            gap: 10px;
+        }
+
+        #ar-ui.active { display: flex; }
+
+        /* Barra de status no topo */
+        #ar-status-bar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 101;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
             pointer-events: none;
         }
 
-        .ui-panel {
-            background: rgba(0, 0, 0, 0.8); 
-            color: white; 
-            padding: 15px; 
-            border-radius: 12px; 
-            text-align: center;
-            margin-bottom: 10px;
-            pointer-events: auto;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            width: 100%;
-            box-sizing: border-box;
-        }
+        #ar-status-bar.active { display: flex; }
 
-        #image-setup-panel { display: block; }
-        #ar-controls-panel { display: none; }
-        
-        /* Estilos dos Controles */
-        .control-group {
+        .status-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.6);
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            margin: 8px 0;
-            font-size: 14px;
-        }
-        
-        input[type="range"] {
-            width: 60%;
+            gap: 6px;
         }
 
-        /* Botões */
-        input[type="file"] { display: none; }
+        .status-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--accent2);
+            animation: pulse 1.5s infinite;
+        }
 
-        .btn {
-            display: inline-block;
-            padding: 10px 15px;
-            cursor: pointer;
-            background-color: #007AFF;
-            color: white;
-            border-radius: 8px;
-            font-weight: bold;
-            margin-top: 5px;
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .btn-exit {
+            pointer-events: auto;
+            background: rgba(255,255,255,0.12);
             border: none;
-            width: 100%;
-            box-sizing: border-box;
-            transition: background 0.2s;
+            color: white;
+            font-size: 12px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
         }
 
-        .btn:active { background-color: #0056b3; }
-        .btn-success { background-color: #34C759; }
-        .btn-warning { background-color: #FF9500; }
-        .btn-gemini { background-color: #AF52DE; margin-top: 10px; }
+        /* Painel de sliders */
+        .controls-panel {
+            width: 100%;
+            max-width: 380px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px 18px;
+            pointer-events: auto;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
 
-        #gemini-response {
-            margin-top: 10px;
+        .panel-title {
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 14px;
+        }
+
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .slider-row:last-child { margin-bottom: 0; }
+
+        .slider-label {
+            font-size: 12px;
+            font-weight: 500;
+            color: rgba(255,255,255,0.7);
+            width: 88px;
+            flex-shrink: 0;
+        }
+
+        .slider-label small {
+            display: block;
+            font-size: 10px;
+            color: var(--muted);
+            font-weight: 400;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            flex: 1;
+            height: 3px;
+            background: var(--track);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: var(--text);
+            border: 2px solid var(--accent);
+            cursor: pointer;
+        }
+
+        .slider-val {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            color: var(--accent2);
+            width: 32px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        /* Botões de ação */
+        .actions-row {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+            max-width: 380px;
+            pointer-events: auto;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 14px 10px;
+            border: none;
+            border-radius: var(--radius);
+            font-family: 'Space Grotesk', sans-serif;
             font-size: 13px;
-            font-style: italic;
-            color: #E5E5EA;
-            text-align: left;
-            border-top: 1px solid #444;
-            padding-top: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            transition: opacity 0.15s, transform 0.1s;
+            line-height: 1.2;
+        }
+
+        .action-btn:active { opacity: 0.75; transform: scale(0.97); }
+
+        .action-btn .btn-icon { font-size: 20px; }
+
+        .btn-pin {
+            background: var(--surface-light);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-pin.pinned {
+            background: var(--accent2);
+            color: #000;
+            border-color: transparent;
+        }
+
+        .btn-flip {
+            background: var(--surface-light);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-wall {
+            background: var(--surface-light);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-wall.active {
+            background: #30D158;
+            color: #000;
+            border-color: transparent;
+        }
+
+        /* Dica de posicionamento */
+        #placement-hint {
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.1em;
+            color: rgba(255,255,255,0.5);
+            text-align: center;
+            padding: 6px 16px;
+            pointer-events: none;
+        }
+
+        /* Reticle overlay customizado */
+        #reticle-hint {
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 50;
             display: none;
         }
 
-        .a-enter-vr-button { bottom: 10px !important; right: 10px !important; }
+        #reticle-hint svg { opacity: 0.7; }
+
+        /* Toast notification */
+        #toast {
+            position: fixed;
+            top: 80px; left: 50%;
+            transform: translateX(-50%) translateY(-10px);
+            background: rgba(255,255,255,0.12);
+            backdrop-filter: blur(12px);
+            color: white;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 10px 20px;
+            border-radius: 20px;
+            z-index: 200;
+            opacity: 0;
+            transition: opacity 0.25s, transform 0.25s;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        #toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* ── OVERLAY DE PREVIEW (antes de entrar no AR) ── */
+        #preview-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 8000;
+            background: #000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 24px;
+        }
+
+        #preview-overlay.active { display: flex; }
+
+        #preview-overlay h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text);
+            text-align: center;
+        }
+
+        #preview-overlay p {
+            font-size: 14px;
+            color: var(--muted);
+            text-align: center;
+            max-width: 300px;
+            line-height: 1.5;
+        }
+
+        #preview-img {
+            max-width: 280px;
+            max-height: 300px;
+            object-fit: contain;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .two-btns {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            max-width: 340px;
+        }
+
+        .btn-secondary {
+            flex: 1;
+            padding: 14px;
+            background: var(--surface-light);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            flex: 2;
+            padding: 14px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: var(--radius);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        /* Modo não-AR (fallback desktop) */
+        #desktop-fallback {
+            position: fixed;
+            inset: 0;
+            background: #111;
+            z-index: 7000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 32px;
+        }
+
+        #desktop-fallback.active { display: flex; }
+
+        #desktop-fallback h2 {
+            font-size: 22px; font-weight: 700;
+            color: var(--text); text-align: center;
+        }
+
+        #desktop-fallback p {
+            font-size: 14px; color: var(--muted);
+            text-align: center; max-width: 360px; line-height: 1.6;
+        }
+
+        .qr-note {
+            background: var(--surface-light);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px 24px;
+            text-align: center;
+            max-width: 340px;
+        }
+
+        .qr-note p { font-size: 13px; color: rgba(255,255,255,0.6); }
+        .qr-note strong { color: var(--accent2); }
     </style>
-
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    
-    <script>
-        // A chave da API é injetada dinamicamente pelo ambiente
-        const apiKey = ""; 
-
-        AFRAME.registerComponent('ar-projector-system', {
-            init: function () {
-                this.xrHitTestSource = null;
-                this.viewerSpace = null;
-                this.refSpace = null;
-                this.isImageLoaded = false;
-                this.isPinned = false; // Define se a imagem está presa no chão
-                
-                const sceneEl = this.el.sceneEl;
-                const imageSetupPanel = document.getElementById('image-setup-panel');
-                const arControlsPanel = document.getElementById('ar-controls-panel');
-                const fileInput = document.getElementById('file-input');
-                const uploadButton = document.getElementById('upload-button');
-                const imagePlane = document.getElementById('image-plane');
-                const drawingReticle = document.getElementById('drawing-reticle');
-                const pinButton = document.getElementById('pin-button');
-                const geminiButton = document.getElementById('ask-gemini');
-                
-                let base64ImageString = "";
-                let imageMimeType = "";
-
-                // 1. CARREGAR IMAGEM
-                uploadButton.addEventListener('click', () => {
-                    const file = fileInput.files[0];
-                    if (file) {
-                        imageMimeType = file.type;
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            // CORREÇÃO AQUI: Usamos a Data URL diretamente
-                            const imageDataUrl = e.target.result;
-
-                            // Cria uma imagem temporária apenas para ler a proporção (largura/altura)
-                            const tempImg = new Image();
-                            tempImg.onload = () => {
-                                // Aplica a textura usando a Data URL string
-                                imagePlane.setAttribute('material', {
-                                    src: imageDataUrl, 
-                                    transparent: true,
-                                    opacity: 0.9
-                                });
-
-                                // Ajusta a proporção do plano
-                                const aspectRatio = tempImg.width / tempImg.height;
-                                imagePlane.setAttribute('height', '0.4'); // 40cm base
-                                imagePlane.setAttribute('width', (0.4 * aspectRatio).toString());
-                                
-                                this.isImageLoaded = true;
-                                base64ImageString = imageDataUrl.split(',')[1]; // Pega só o base64 para a IA
-                                
-                                imageSetupPanel.style.display = 'none';
-                                arControlsPanel.style.display = 'block';
-
-                                const arButton = document.querySelector('.a-enter-vr-button');
-                                if (arButton) arButton.style.display = 'block';
-                            };
-                            // Inicia o carregamento da imagem temporária
-                            tempImg.src = imageDataUrl;
-                        };
-                        reader.readAsDataURL(file);
-                    } else {
-                        alert("Por favor, selecione uma imagem primeiro.");
-                    }
-                });
-
-                // 2. CONTROLES DA IMAGEM (Tamanho, Rotação, Transparência)
-                document.getElementById('scale-slider').addEventListener('input', (e) => {
-                    const val = e.target.value;
-                    imagePlane.setAttribute('scale', `${val} ${val} ${val}`);
-                });
-
-                document.getElementById('rotation-slider').addEventListener('input', (e) => {
-                    const val = e.target.value;
-                    // Roda a imagem no eixo Z (pois ela já está deitada no chão no eixo X)
-                    imagePlane.setAttribute('rotation', `-90 0 ${val}`);
-                });
-
-                document.getElementById('opacity-slider').addEventListener('input', (e) => {
-                    const val = e.target.value;
-                    imagePlane.setAttribute('material', 'opacity', val);
-                });
-
-                // 3. FIXAR IMAGEM NO CHÃO
-                pinButton.addEventListener('click', () => {
-                    this.isPinned = !this.isPinned;
-                    if (this.isPinned) {
-                        pinButton.textContent = "Desbloquear Imagem";
-                        pinButton.classList.replace('btn-warning', 'btn-success');
-                    } else {
-                        pinButton.textContent = "Fixar Imagem no Chão";
-                        pinButton.classList.replace('btn-success', 'btn-warning');
-                    }
-                });
-
-                // 4. INTEGRAÇÃO COM GEMINI API
-                geminiButton.addEventListener('click', async () => {
-                    const responseDiv = document.getElementById('gemini-response');
-                    if (!base64ImageString) return;
-
-                    geminiButton.textContent = "Analisando...";
-                    geminiButton.disabled = true;
-                    responseDiv.style.display = 'block';
-                    responseDiv.innerHTML = "A IA está olhando sua imagem...";
-
-                    try {
-                        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-                        const payload = {
-                            contents: [{
-                                role: "user",
-                                parts: [
-                                    { text: "Atue como um professor de desenho. Analise esta imagem e me dê uma dica super curta e prática (máximo 3 linhas) de como eu posso começar a desenhá-la no papel usando formas geométricas." },
-                                    { inlineData: { mimeType: imageMimeType, data: base64ImageString } }
-                                ]
-                            }]
-                        };
-
-                        const res = await fetch(url, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify(payload)
-                        });
-
-                        const data = await res.json();
-                        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Não consegui analisar a imagem.";
-                        responseDiv.innerHTML = `<strong>Dica do Gemini:</strong><br>${text}`;
-                    } catch (error) {
-                        responseDiv.innerHTML = "Erro ao conectar com a IA.";
-                    } finally {
-                        geminiButton.textContent = "Pedir Nova Dica à IA";
-                        geminiButton.disabled = false;
-                    }
-                });
-
-                // 5. CONFIGURAÇÃO AR (Sessão WebXR)
-                sceneEl.addEventListener('loaded', () => {
-                    const arButton = document.querySelector('.a-enter-vr-button');
-                    if (arButton) arButton.style.display = 'none'; // Esconde até carregar imagem
-                });
-
-                sceneEl.addEventListener('enter-vr', () => {
-                    if (sceneEl.is('ar-mode')) {
-                        const session = sceneEl.renderer.xr.getSession();
-                        if (session) {
-                            session.requestReferenceSpace('viewer').then((space) => {
-                                this.viewerSpace = space;
-                               session.requestHitTestSource({ space: this.viewerSpace })
-                                    .then((hitTestSource) => { this.xrHitTestSource = hitTestSource; });
-                            });
-                            session.requestReferenceSpace('local').then((space) => { this.refSpace = space; });
-                        }
-                    }
-                });
-
-                // 6. DESENHAR (Ao tocar na tela)
-                sceneEl.addEventListener('touchstart', (e) => {
-                    // Impede de desenhar se clicou em um botão da interface
-                    if (e.target.closest('#ui-container')) return;
-
-                    // Só desenha se a imagem estiver fixada e o modo AR ativo
-                    if (!sceneEl.is('ar-mode') || !this.isPinned || !drawingReticle.getAttribute('visible')) return;
-
-                    const pos = drawingReticle.getAttribute('position');
-                    const paint = document.createElement('a-sphere');
-                    paint.setAttribute('color', '#FF2D55'); // Tinta Rosa/Vermelha
-                    paint.setAttribute('radius', '0.005'); // Tinta fina (5mm)
-                    paint.setAttribute('position', { x: pos.x, y: pos.y, z: pos.z });
-                    sceneEl.appendChild(paint);
-                });
-            },
-            
-            // Loop de atualização da câmera AR
-            tick: function () {
-                const sceneEl = this.el.sceneEl;
-                if (sceneEl.is('ar-mode') && this.isImageLoaded) {
-                    const frame = sceneEl.frame;
-                    const xrHitTestSource = this.xrHitTestSource;
-                    const imagePlane = document.getElementById('image-plane');
-                    const drawingReticle = document.getElementById('drawing-reticle');
-
-                    if (frame && xrHitTestSource && this.refSpace) {
-                        const hitTestResults = frame.getHitTestResults(xrHitTestSource);
-                        if (hitTestResults.length > 0) {
-                            const pose = hitTestResults[0].getPose(this.refSpace);
-                            const pos = pose.transform.position;
-
-                            // O retículo de desenho (mira central) acompanha SEMPRE a câmera
-                            drawingReticle.setAttribute('position', { x: pos.x, y: pos.y, z: pos.z });
-                            drawingReticle.setAttribute('visible', 'true');
-
-                            // A imagem só acompanha a câmera se NÃO estiver fixada
-                            if (!this.isPinned) {
-                                imagePlane.setAttribute('position', { x: pos.x, y: pos.y, z: pos.z });
-                                imagePlane.setAttribute('visible', 'true');
-                            }
-                        } else {
-                            drawingReticle.setAttribute('visible', 'false');
-                            if (!this.isPinned) imagePlane.setAttribute('visible', 'false');
-                        }
-                    }
-                }
-            }
-        });
-    </script>
 </head>
 <body>
 
-    <div id="ui-container">
-        <!-- Painel Inicial -->
-        <div id="image-setup-panel" class="ui-panel">
-            <h3>Preparar Desenho</h3>
-            <label for="file-input" class="btn">1. Escolher Imagem</label>
-            <input id="file-input" type="file" accept="image/*">
-            <button id="upload-button" class="btn btn-success" style="margin-top: 15px;">2. Iniciar AR</button>
+<!-- ══════════════════════════════════════
+     TELA DE ENTRADA
+══════════════════════════════════════ -->
+<div id="entry-screen">
+    <p class="entry-logo">AR Projector Pro</p>
+
+    <h1 class="entry-title">Projete.<br>Pinte.<span>.</span></h1>
+    <p class="entry-sub">Carregue sua referência e projete em tamanho real no chão ou muro.</p>
+
+    <div class="drop-zone" id="drop-zone">
+        <span class="drop-icon">🖼️</span>
+        <p>Toque para escolher imagem</p>
+        <small>JPG, PNG ou SVG</small>
+        <img id="thumb" class="preview-thumb" alt="preview">
+    </div>
+    <input type="file" id="file-input" accept="image/*">
+
+    <button class="entry-start" id="start-btn">
+        <span>Iniciar Projeção AR</span> <span>→</span>
+    </button>
+</div>
+
+<!-- ══════════════════════════════════════
+     PREVIEW ANTES DE ENTRAR NO AR
+══════════════════════════════════════ -->
+<div id="preview-overlay">
+    <h2>Pronto para projetar</h2>
+    <img id="preview-img" alt="imagem selecionada">
+    <p>Aponte a câmera para o chão ou muro onde deseja projetar. Quando encontrar a superfície, a imagem aparecerá automaticamente.</p>
+    <div class="two-btns">
+        <button class="btn-secondary" id="btn-back-preview">← Trocar</button>
+        <button class="btn-primary" id="btn-enter-ar">Entrar no AR →</button>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     FALLBACK DESKTOP
+══════════════════════════════════════ -->
+<div id="desktop-fallback">
+    <h2>📱 Abra no celular</h2>
+    <p>AR Projector Pro usa a câmera e sensores do seu dispositivo para projetar imagens em superfícies reais.</p>
+    <div class="qr-note">
+        <p>Acesse este arquivo em um <strong>smartphone Android ou iPhone</strong> com suporte a WebXR AR.</p>
+        <br>
+        <p style="font-size:11px; color: #555;">Chrome (Android) · Safari 16+ (iOS) · Samsung Internet</p>
+    </div>
+    <button class="btn-primary" style="max-width:340px; width:100%; padding:14px;" id="btn-force-ar">
+        Tentar mesmo assim
+    </button>
+</div>
+
+<!-- ══════════════════════════════════════
+     STATUS BAR (AR ativo)
+══════════════════════════════════════ -->
+<div id="ar-status-bar">
+    <div class="status-label">
+        <span class="status-dot"></span>
+        AR Ativo
+    </div>
+    <button class="btn-exit" id="btn-exit-ar">✕ Sair</button>
+</div>
+
+<!-- ══════════════════════════════════════
+     CONTROLES AR (painel inferior)
+══════════════════════════════════════ -->
+<div id="ar-ui">
+    <p id="placement-hint">Mova a câmera para detectar a superfície…</p>
+
+    <div class="controls-panel">
+        <p class="panel-title">Ajustes da Projeção</p>
+
+        <div class="slider-row">
+            <div class="slider-label">
+                Tamanho
+                <small>escala</small>
+            </div>
+            <input type="range" id="scale-slider" min="0.1" max="5" step="0.05" value="1">
+            <span class="slider-val" id="scale-val">1.0</span>
         </div>
 
-        <!-- Painel de Controles (Aparece após carregar a imagem) -->
-        <div id="ar-controls-panel" class="ui-panel">
-            <div class="control-group">
-                <label>Tamanho:</label>
-                <input type="range" id="scale-slider" min="0.2" max="3" step="0.1" value="1">
+        <div class="slider-row">
+            <div class="slider-label">
+                Girar
+                <small>graus</small>
             </div>
-            <div class="control-group">
-                <label>Girar:</label>
-                <input type="range" id="rotation-slider" min="0" max="360" step="1" value="0">
+            <input type="range" id="rotation-slider" min="0" max="360" step="1" value="0">
+            <span class="slider-val" id="rotation-val">0°</span>
+        </div>
+
+        <div class="slider-row">
+            <div class="slider-label">
+                Opacidade
+                <small>transparência</small>
             </div>
-            <div class="control-group">
-                <label>Transparência:</label>
-                <input type="range" id="opacity-slider" min="0.1" max="1" step="0.1" value="0.9">
-            </div>
-            
-            <button id="pin-button" class="btn btn-warning">Fixar Imagem no Chão</button>
-            <button id="ask-gemini" class="btn btn-gemini">🌟 Dica da IA (Gemini)</button>
-            
-            <div id="gemini-response"></div>
+            <input type="range" id="opacity-slider" min="0.05" max="1" step="0.05" value="0.75">
+            <span class="slider-val" id="opacity-val">75%</span>
         </div>
     </div>
 
-    <!-- Cena A-Frame com WebXR -->
-    <a-scene 
-        webxr="requiredFeatures: hit-test;" 
-        ar-projector-system 
-        renderer="antialias: true; alpha: true; colorManagement: true;">
-        
-        <a-camera position="0 1.6 0"></a-camera>
+    <div class="actions-row">
+        <button class="action-btn btn-pin" id="pin-btn">
+            <span class="btn-icon">📌</span>
+            <span id="pin-label">Fixar</span>
+        </button>
+        <button class="action-btn btn-flip" id="flip-btn">
+            <span class="btn-icon">↔️</span>
+            <span>Espelhar</span>
+        </button>
+        <button class="action-btn btn-wall" id="wall-btn">
+            <span class="btn-icon">🧱</span>
+            <span id="wall-label">Muro</span>
+        </button>
+    </div>
+</div>
 
-        <!-- PLANO DA IMAGEM -->
-        <a-plane id="image-plane" 
-                 visible="false"
-                 rotation="-90 0 0"
-                 material="shader: flat; transparent: true; opacity: 0.9; side: double">
-        </a-plane>
+<!-- Reticle visual (mira de posicionamento) -->
+<div id="reticle-hint">
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+        <circle cx="24" cy="24" r="20" stroke="white" stroke-width="1.5" stroke-dasharray="4 4"/>
+        <circle cx="24" cy="24" r="3" fill="white" opacity="0.8"/>
+        <line x1="24" y1="4" x2="24" y2="14" stroke="white" stroke-width="1.5"/>
+        <line x1="24" y1="34" x2="24" y2="44" stroke="white" stroke-width="1.5"/>
+        <line x1="4" y1="24" x2="14" y2="24" stroke="white" stroke-width="1.5"/>
+        <line x1="34" y1="24" x2="44" y2="24" stroke="white" stroke-width="1.5"/>
+    </svg>
+</div>
 
-        <!-- MIRA DE DESENHO (O ponto onde a tinta vai cair) -->
-        <a-entity id="drawing-reticle" 
-                  visible="false"
-                  geometry="primitive: ring; radiusInner: 0.005; radiusOuter: 0.01"
-                  material="color: #FF2D55; shader: flat"
-                  rotation="-90 0 0">
-        </a-entity>
+<!-- Toast -->
+<div id="toast"></div>
 
-        <a-light type="ambient" color="#ffffff" intensity="1"></a-light>
-    </a-scene>
+<!-- ══════════════════════════════════════
+     CENA A-FRAME
+══════════════════════════════════════ -->
+<a-scene
+    id="ar-scene"
+    webxr="requiredFeatures: hit-test; optionalFeatures: dom-overlay; overlayElement: #ar-ui-wrapper"
+    renderer="antialias: true; alpha: true; colorManagement: true; physicallyCorrectLights: true"
+    vr-mode-ui="enabled: false"
+    style="display:none">
+
+    <a-camera id="main-camera" position="0 1.6 0" look-controls-enabled="false"></a-camera>
+
+    <!-- Plano da imagem projetada -->
+    <a-plane
+        id="image-plane"
+        visible="false"
+        rotation="-90 0 0"
+        material="shader: flat; transparent: true; opacity: 0.75; side: double; alphaTest: 0.01">
+    </a-plane>
+
+    <!-- Reticle AR (anel no chão) -->
+    <a-entity
+        id="ar-reticle"
+        visible="false"
+        geometry="primitive: ring; radiusInner: 0.04; radiusOuter: 0.065"
+        material="color: #FFD60A; shader: flat; opacity: 0.85"
+        rotation="-90 0 0">
+    </a-entity>
+
+    <a-light type="ambient" color="#ffffff" intensity="1.2"></a-light>
+</a-scene>
+
+
+<!-- ══════════════════════════════════════
+     LÓGICA PRINCIPAL
+══════════════════════════════════════ -->
+<script>
+(function () {
+
+    // ── Estado global ──
+    const state = {
+        imageDataUrl: null,
+        imageMimeType: null,
+        imageAspect: 1,
+        isPinned: false,
+        isWallMode: false, // true = vertical (muro), false = horizontal (chão)
+        isFlipped: false,
+        scale: 1,
+        rotation: 0,
+        opacity: 0.75,
+        surfaceDetected: false,
+        arActive: false,
+    };
+
+    // ── XR internals ──
+    let xrHitTestSource = null;
+    let viewerSpace = null;
+    let refSpace = null;
+
+    // ── Elementos ──
+    const entryScreen    = document.getElementById('entry-screen');
+    const previewOverlay = document.getElementById('preview-overlay');
+    const desktopFallback= document.getElementById('desktop-fallback');
+    const arStatusBar    = document.getElementById('ar-status-bar');
+    const arUI           = document.getElementById('ar-ui');
+    const arScene        = document.getElementById('ar-scene');
+    const fileInput      = document.getElementById('file-input');
+    const dropZone       = document.getElementById('drop-zone');
+    const thumb          = document.getElementById('thumb');
+    const startBtn       = document.getElementById('start-btn');
+    const previewImg     = document.getElementById('preview-img');
+    const placementHint  = document.getElementById('placement-hint');
+    const reticleHint    = document.getElementById('reticle-hint');
+    const toast          = document.getElementById('toast');
+
+    const imagePlane  = document.getElementById('image-plane');
+    const arReticle   = document.getElementById('ar-reticle');
+
+    const scaleSlider    = document.getElementById('scale-slider');
+    const rotationSlider = document.getElementById('rotation-slider');
+    const opacitySlider  = document.getElementById('opacity-slider');
+
+    const scaleVal    = document.getElementById('scale-val');
+    const rotationVal = document.getElementById('rotation-val');
+    const opacityVal  = document.getElementById('opacity-val');
+
+    const pinBtn   = document.getElementById('pin-btn');
+    const flipBtn  = document.getElementById('flip-btn');
+    const wallBtn  = document.getElementById('wall-btn');
+
+    // ── Toast helper ──
+    function showToast(msg, duration = 2200) {
+        toast.textContent = msg;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), duration);
+    }
+
+    // ── Detectar se WebXR AR é suportado ──
+    async function checkARSupport() {
+        if (!navigator.xr) return false;
+        try {
+            return await navigator.xr.isSessionSupported('immersive-ar');
+        } catch { return false; }
+    }
+
+    // ── Carregar imagem ──
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+    dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) loadFile(file);
+    });
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files[0]) loadFile(fileInput.files[0]);
+    });
+
+    function loadFile(file) {
+        state.imageMimeType = file.type;
+        const reader = new FileReader();
+        reader.onload = e => {
+            state.imageDataUrl = e.target.result;
+            const img = new Image();
+            img.onload = () => {
+                state.imageAspect = img.width / img.height;
+                thumb.src = state.imageDataUrl;
+                thumb.classList.add('visible');
+                previewImg.src = state.imageDataUrl;
+                startBtn.classList.add('visible');
+            };
+            img.src = state.imageDataUrl;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // ── Botão Iniciar ──
+    startBtn.addEventListener('click', async () => {
+        if (!state.imageDataUrl) return;
+        const supported = await checkARSupport();
+        if (supported) {
+            entryScreen.style.display = 'none';
+            previewOverlay.classList.add('active');
+        } else {
+            // Tenta mesmo assim — pode funcionar em alguns navegadores
+            entryScreen.style.display = 'none';
+            desktopFallback.classList.add('active');
+        }
+    });
+
+    document.getElementById('btn-back-preview').addEventListener('click', () => {
+        previewOverlay.classList.remove('active');
+        entryScreen.style.display = 'flex';
+    });
+
+    document.getElementById('btn-force-ar').addEventListener('click', () => {
+        desktopFallback.classList.remove('active');
+        previewOverlay.classList.add('active');
+    });
+
+    document.getElementById('btn-enter-ar').addEventListener('click', () => {
+        previewOverlay.classList.remove('active');
+        launchAR();
+    });
+
+    document.getElementById('btn-exit-ar').addEventListener('click', () => {
+        const scene = document.querySelector('a-scene');
+        if (scene && scene.is('ar-mode')) scene.exitAR ? scene.exitAR() : scene.exitVR();
+        teardownAR();
+    });
+
+    // ── Lançar AR ──
+    function launchAR() {
+        // Monta a textura no plano antes de entrar
+        applyTexture();
+
+        arScene.style.display = 'block';
+
+        // Pequeno delay para A-Frame inicializar
+        setTimeout(() => {
+            const scene = document.querySelector('a-scene');
+            if (scene.hasLoaded) {
+                enterARSession(scene);
+            } else {
+                scene.addEventListener('loaded', () => enterARSession(scene), { once: true });
+            }
+        }, 100);
+    }
+
+    function enterARSession(scene) {
+        // Aciona o botão de AR do A-Frame programaticamente
+        const vrBtn = document.querySelector('.a-enter-vr-button');
+        if (vrBtn) vrBtn.click();
+
+        scene.addEventListener('enter-vr', () => {
+            if (scene.is('ar-mode')) {
+                state.arActive = true;
+                arStatusBar.classList.add('active');
+                arUI.classList.add('active');
+                reticleHint.style.display = 'block';
+                setupHitTest(scene);
+            }
+        }, { once: true });
+
+        scene.addEventListener('exit-vr', teardownAR, { once: true });
+    }
+
+    async function setupHitTest(scene) {
+        const session = scene.renderer.xr.getSession();
+        if (!session) return;
+        try {
+            viewerSpace = await session.requestReferenceSpace('viewer');
+            xrHitTestSource = await session.requestHitTestSource({ space: viewerSpace });
+            refSpace = await session.requestReferenceSpace('local');
+        } catch (e) {
+            showToast('Hit-test não disponível neste dispositivo');
+        }
+    }
+
+    function teardownAR() {
+        state.arActive = false;
+        state.isPinned = false;
+        xrHitTestSource = null;
+        arStatusBar.classList.remove('active');
+        arUI.classList.remove('active');
+        reticleHint.style.display = 'none';
+        arScene.style.display = 'none';
+        imagePlane.setAttribute('visible', 'false');
+        arReticle.setAttribute('visible', 'false');
+        // Volta à tela de entrada
+        entryScreen.style.display = 'flex';
+    }
+
+    // ── Aplicar textura no plano ──
+    function applyTexture() {
+        const h = 0.5; // altura base: 50cm
+        const w = h * state.imageAspect;
+        imagePlane.setAttribute('height', h.toFixed(3));
+        imagePlane.setAttribute('width', w.toFixed(3));
+        imagePlane.setAttribute('material', {
+            src: state.imageDataUrl,
+            transparent: true,
+            opacity: state.opacity,
+            side: 'double',
+            shader: 'flat',
+            alphaTest: 0.01,
+            repeat: state.isFlipped ? '-1 1' : '1 1',
+            offset: state.isFlipped ? '1 0' : '0 0',
+        });
+        applyTransform();
+    }
+
+    // ── Aplicar transformações ──
+    function applyTransform() {
+        const s = state.scale;
+        imagePlane.setAttribute('scale', `${s} ${s} ${s}`);
+
+        const baseRotX = state.isWallMode ? '0' : '-90';
+        imagePlane.setAttribute('rotation', `${baseRotX} 0 ${state.rotation}`);
+
+        imagePlane.setAttribute('material', 'opacity', state.opacity);
+    }
+
+    // ── Sliders ──
+    scaleSlider.addEventListener('input', e => {
+        state.scale = parseFloat(e.target.value);
+        scaleVal.textContent = state.scale.toFixed(1);
+        applyTransform();
+    });
+
+    rotationSlider.addEventListener('input', e => {
+        state.rotation = parseInt(e.target.value);
+        rotationVal.textContent = state.rotation + '°';
+        applyTransform();
+    });
+
+    opacitySlider.addEventListener('input', e => {
+        state.opacity = parseFloat(e.target.value);
+        opacityVal.textContent = Math.round(state.opacity * 100) + '%';
+        imagePlane.setAttribute('material', 'opacity', state.opacity);
+    });
+
+    // ── Botão Fixar ──
+    pinBtn.addEventListener('click', () => {
+        state.isPinned = !state.isPinned;
+        pinBtn.classList.toggle('pinned', state.isPinned);
+        document.getElementById('pin-label').textContent = state.isPinned ? 'Soltar' : 'Fixar';
+        placementHint.textContent = state.isPinned
+            ? '📌 Imagem fixada — pode pintar!'
+            : 'Mova a câmera para reposicionar…';
+        showToast(state.isPinned ? 'Imagem fixada! Pode pintar.' : 'Imagem liberada para mover.');
+    });
+
+    // ── Botão Espelhar ──
+    flipBtn.addEventListener('click', () => {
+        state.isFlipped = !state.isFlipped;
+        applyTexture();
+        showToast(state.isFlipped ? 'Imagem espelhada.' : 'Espelho removido.');
+    });
+
+    // ── Botão Muro/Chão ──
+    wallBtn.addEventListener('click', () => {
+        state.isWallMode = !state.isWallMode;
+        wallBtn.classList.toggle('active', state.isWallMode);
+        document.getElementById('wall-label').textContent = state.isWallMode ? 'Chão' : 'Muro';
+        wallBtn.querySelector('.btn-icon').textContent = state.isWallMode ? '🏠' : '🧱';
+        applyTransform();
+        showToast(state.isWallMode
+            ? 'Modo Muro: aponte para uma parede.'
+            : 'Modo Chão: aponte para o chão.');
+    });
+
+    // ── Tick: hit-test loop via A-Frame ──
+    AFRAME.registerComponent('ar-tick-controller', {
+        tick: function () {
+            if (!state.arActive) return;
+            const scene = this.el.sceneEl;
+            if (!scene.is('ar-mode')) return;
+
+            const frame = scene.frame;
+            if (!frame || !xrHitTestSource || !refSpace) return;
+
+            const results = frame.getHitTestResults(xrHitTestSource);
+
+            if (results.length > 0) {
+                const pose = results[0].getPose(refSpace);
+                const p = pose.transform.position;
+
+                // Reticle
+                arReticle.setAttribute('visible', 'true');
+                arReticle.setAttribute('position', { x: p.x, y: p.y, z: p.z });
+
+                // Imagem: só segue se não estiver fixada
+                if (!state.isPinned) {
+                    imagePlane.setAttribute('visible', 'true');
+                    imagePlane.setAttribute('position', { x: p.x, y: p.y, z: p.z });
+                    if (!state.surfaceDetected) {
+                        state.surfaceDetected = true;
+                        placementHint.textContent = 'Superfície detectada! Toque em Fixar quando estiver certo.';
+                    }
+                }
+            } else {
+                arReticle.setAttribute('visible', 'false');
+                if (!state.isPinned) {
+                    imagePlane.setAttribute('visible', 'false');
+                    state.surfaceDetected = false;
+                    placementHint.textContent = 'Mova a câmera para detectar a superfície…';
+                }
+            }
+        }
+    });
+
+    // Adiciona o componente tick à câmera
+    document.querySelector('a-scene').setAttribute('ar-tick-controller', '');
+
+})();
+</script>
 
 </body>
 </html>

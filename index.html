@@ -3,427 +3,702 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-<title>AR Projector Pro</title>
+<title>AR Traçador Pro</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Space+Mono&display=swap');
-  :root{--bg:#0a0a0a;--sur:rgba(18,18,20,.95);--brd:rgba(255,255,255,.09);--acc:#FF3B00;--yel:#FFD60A;--grn:#30D158;--txt:#F0F0EC;--mut:#666;--r:14px}
-  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-  body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--txt);height:100dvh;overflow:hidden}
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Space+Mono:wght@400;700&display=swap');
 
-  /* ENTRADA */
-  #entry{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;background:var(--bg);z-index:100}
-  #entry .logo{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--mut);margin-bottom:36px}
-  #entry h1{font-size:clamp(42px,12vw,64px);font-weight:700;line-height:1;text-align:center;margin-bottom:10px}
-  #entry h1 em{color:var(--acc);font-style:normal}
-  #entry .sub{font-size:15px;color:var(--mut);text-align:center;max-width:280px;line-height:1.5;margin-bottom:44px}
+:root {
+  --bg: #0d0d0f;
+  --glass: rgba(13,13,15,0.88);
+  --glass2: rgba(22,22,26,0.92);
+  --border: rgba(255,255,255,0.08);
+  --acc: #FF3B00;
+  --yel: #FFD60A;
+  --grn: #32D74B;
+  --txt: #F2F2F0;
+  --mut: #5a5a6a;
+  --r: 16px;
+  --rr: 24px;
+}
 
-  .drop-zone{width:100%;max-width:340px;border:1.5px dashed rgba(255,255,255,.18);border-radius:var(--r);padding:36px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;transition:border-color .2s,background .2s}
-  .drop-zone:active{border-color:var(--acc);background:rgba(255,59,0,.06)}
-  .drop-zone .icon{font-size:38px}
-  .drop-zone p{font-size:15px;font-weight:600}
-  .drop-zone small{font-size:12px;color:var(--mut)}
-  #thumb{width:72px;height:72px;object-fit:cover;border-radius:10px;border:2px solid var(--acc);display:none;margin-top:4px}
-  #file-input{display:none}
-  #start-btn{width:100%;max-width:340px;padding:16px;margin-top:16px;background:var(--acc);color:#fff;border:none;border-radius:var(--r);font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;cursor:pointer;display:none;align-items:center;justify-content:center;gap:8px}
-  #start-btn:active{opacity:.8}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; user-select: none; }
 
-  /* CANVAS */
-  #ar-canvas{position:fixed;inset:0;display:none;touch-action:none}
+body {
+  font-family: 'Space Grotesk', sans-serif;
+  background: var(--bg);
+  color: var(--txt);
+  height: 100dvh;
+  overflow: hidden;
+  touch-action: none;
+}
 
-  /* HUD */
-  #hud{position:fixed;inset:0;display:none;pointer-events:none;z-index:50}
-  #status-bar{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:52px 20px 16px;background:linear-gradient(to bottom,rgba(0,0,0,.65),transparent);pointer-events:none}
-  .live-badge{display:flex;align-items:center;gap:7px;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.7)}
-  .live-dot{width:7px;height:7px;border-radius:50%;background:var(--yel);animation:blink 1.4s infinite}
-  @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
-  #exit-btn{pointer-events:auto;background:rgba(255,255,255,.12);border:none;color:#fff;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;padding:7px 14px;border-radius:20px;cursor:pointer}
-  #hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.1em;color:rgba(255,255,255,.55);text-align:center;background:rgba(0,0,0,.4);padding:8px 18px;border-radius:20px;pointer-events:none;transition:opacity .4s;white-space:nowrap}
-  #panel{position:absolute;bottom:0;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 16px 30px;pointer-events:none}
-  .ctrl-card{width:100%;max-width:380px;background:var(--sur);border:1px solid var(--brd);border-radius:var(--r);padding:14px 16px;pointer-events:auto;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)}
-  .card-title{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--mut);margin-bottom:12px}
-  .row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-  .row:last-child{margin-bottom:0}
-  .lbl{font-size:12px;font-weight:600;color:rgba(255,255,255,.65);width:82px;flex-shrink:0}
-  .lbl small{display:block;font-size:9px;color:var(--mut);font-weight:400}
-  input[type=range]{-webkit-appearance:none;flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.14);outline:none}
-  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--txt);border:2.5px solid var(--acc);cursor:pointer}
-  .val{font-family:'Space Mono',monospace;font-size:11px;color:var(--yel);width:34px;text-align:right;flex-shrink:0}
-  .btns-row{width:100%;max-width:380px;display:flex;gap:8px;pointer-events:auto}
-  .act-btn{flex:1;padding:13px 6px;border:1px solid var(--brd);border-radius:var(--r);background:rgba(28,28,30,.95);color:var(--txt);font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:opacity .15s,transform .1s;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
-  .act-btn:active{opacity:.7;transform:scale(.96)}
-  .act-btn .ico{font-size:20px}
-  .act-btn.on{background:var(--yel);color:#000;border-color:transparent}
-  .act-btn.on-green{background:var(--grn);color:#000;border-color:transparent}
+/* ── TELA INICIAL ── */
+#screen-entry {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 28px 22px; gap: 0;
+  background: var(--bg);
+}
 
-  /* TOAST */
-  #toast{position:fixed;top:110px;left:50%;transform:translateX(-50%) translateY(-8px);background:rgba(255,255,255,.13);backdrop-filter:blur(14px);color:#fff;font-size:13px;font-weight:600;padding:9px 20px;border-radius:20px;z-index:200;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;white-space:nowrap}
-  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.logo-tag {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px; letter-spacing: .35em;
+  text-transform: uppercase; color: var(--mut);
+  margin-bottom: 32px;
+}
 
-  /* SEM SUPORTE */
-  #no-ar{position:fixed;inset:0;z-index:300;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;padding:32px;gap:16px;text-align:center}
-  #no-ar h2{font-size:24px}
-  #no-ar p{font-size:14px;color:var(--mut);max-width:320px;line-height:1.6}
-  .info-box{background:rgba(255,255,255,.05);border:1px solid var(--brd);border-radius:var(--r);padding:18px 22px;max-width:340px;width:100%}
-  .info-box p{font-size:13px;color:rgba(255,255,255,.5);line-height:1.7}
-  .info-box strong{color:var(--yel)}
-  .btn-back{width:100%;max-width:340px;padding:14px;background:rgba(255,255,255,.08);border:1px solid var(--brd);border-radius:var(--r);color:var(--txt);font-size:15px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif}
+.main-title {
+  font-size: clamp(44px, 14vw, 68px);
+  font-weight: 700; line-height: .95;
+  text-align: center; margin-bottom: 12px;
+}
+
+.main-title .acc { color: var(--acc); }
+
+.main-sub {
+  font-size: 14px; color: var(--mut);
+  text-align: center; max-width: 260px;
+  line-height: 1.6; margin-bottom: 40px;
+}
+
+.upload-card {
+  width: 100%; max-width: 340px;
+  border: 1.5px dashed rgba(255,255,255,0.15);
+  border-radius: var(--rr);
+  padding: 32px 20px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 10px;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+  position: relative;
+}
+
+.upload-card:active { border-color: var(--acc); background: rgba(255,59,0,.05); }
+
+.upload-icon { font-size: 40px; line-height: 1; }
+.upload-card h3 { font-size: 16px; font-weight: 600; }
+.upload-card small { font-size: 12px; color: var(--mut); }
+
+#thumb {
+  width: 80px; height: 80px; object-fit: cover;
+  border-radius: 12px; border: 2.5px solid var(--acc);
+  display: none; margin-top: 2px;
+}
+
+#file-input { display: none; }
+
+#btn-start {
+  width: 100%; max-width: 340px;
+  padding: 17px; margin-top: 14px;
+  background: var(--acc); color: #fff;
+  border: none; border-radius: var(--r);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px; font-weight: 700;
+  cursor: pointer; display: none;
+  align-items: center; justify-content: center; gap: 10px;
+  letter-spacing: .01em;
+}
+
+#btn-start:active { opacity: .8; }
+
+/* ── VIEWER (câmera + canvas) ── */
+#viewer { position: fixed; inset: 0; display: none; }
+
+#cam-video {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+
+#overlay-canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  touch-action: none;
+}
+
+/* ── HUD ── */
+#hud {
+  position: fixed; inset: 0; z-index: 50;
+  display: none; pointer-events: none;
+}
+
+/* Topo */
+#top-bar {
+  position: absolute; top: 0; left: 0; right: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: env(safe-area-inset-top, 16px) 18px 16px;
+  padding-top: max(env(safe-area-inset-top), 16px);
+  background: linear-gradient(to bottom, rgba(0,0,0,.6) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.badge {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px; letter-spacing: .18em;
+  text-transform: uppercase; color: rgba(255,255,255,.6);
+  display: flex; align-items: center; gap: 6px;
+}
+
+.dot-live {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--grn); animation: blink 1.5s infinite;
+}
+
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:.25} }
+
+#btn-exit {
+  pointer-events: auto;
+  background: rgba(0,0,0,.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,.12);
+  color: #fff; font-size: 13px; font-weight: 600;
+  font-family: 'Space Grotesk', sans-serif;
+  padding: 7px 14px; border-radius: 20px; cursor: pointer;
+}
+
+/* Hint central */
+#center-hint {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Space Mono', monospace;
+  font-size: 12px; letter-spacing: .08em;
+  color: rgba(255,255,255,.6);
+  background: rgba(0,0,0,.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 9px 18px; border-radius: 20px;
+  pointer-events: none;
+  transition: opacity .5s;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Painel inferior */
+#bottom-panel {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 10px;
+  padding: 0 14px;
+  padding-bottom: max(env(safe-area-inset-bottom), 24px);
+  background: linear-gradient(to top, rgba(0,0,0,.55) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+/* Sliders card */
+.sliders-card {
+  width: 100%; max-width: 390px;
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px 16px;
+  pointer-events: auto;
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+}
+
+.card-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px; letter-spacing: .22em;
+  text-transform: uppercase; color: var(--mut);
+  margin-bottom: 12px;
+}
+
+.sl-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 10px;
+}
+.sl-row:last-child { margin-bottom: 0; }
+
+.sl-lbl {
+  font-size: 11px; font-weight: 600;
+  color: rgba(255,255,255,.55);
+  width: 76px; flex-shrink: 0;
+  line-height: 1.2;
+}
+.sl-lbl span { display: block; font-size: 9px; color: var(--mut); font-weight: 400; }
+
+input[type=range] {
+  -webkit-appearance: none; flex: 1;
+  height: 3px; border-radius: 2px;
+  background: rgba(255,255,255,.13); outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--txt);
+  border: 3px solid var(--acc);
+  cursor: pointer;
+}
+
+.sl-val {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px; color: var(--yel);
+  width: 36px; text-align: right; flex-shrink: 0;
+}
+
+/* Botões de ação */
+.actions-row {
+  width: 100%; max-width: 390px;
+  display: flex; gap: 8px;
+  pointer-events: auto;
+}
+
+.act {
+  flex: 1; padding: 12px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--glass2);
+  color: var(--txt);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px; font-weight: 700;
+  cursor: pointer;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 5px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: transform .1s, opacity .1s;
+}
+
+.act:active { transform: scale(.95); opacity: .75; }
+.act .ico { font-size: 22px; }
+.act.on  { background: var(--yel); color: #000; border-color: transparent; }
+.act.grn { background: var(--grn); color: #000; border-color: transparent; }
+
+/* Toast */
+#toast {
+  position: fixed; top: 90px; left: 50%;
+  transform: translateX(-50%) translateY(-6px);
+  background: rgba(255,255,255,.12);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: #fff; font-size: 13px; font-weight: 600;
+  padding: 9px 20px; border-radius: 20px;
+  z-index: 300; opacity: 0;
+  transition: opacity .25s, transform .25s;
+  pointer-events: none; white-space: nowrap;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Sem câmera */
+#no-cam {
+  position: fixed; inset: 0; z-index: 400;
+  background: var(--bg); display: none;
+  flex-direction: column; align-items: center;
+  justify-content: center; padding: 32px; gap: 16px; text-align: center;
+}
+#no-cam h2 { font-size: 22px; }
+#no-cam p { font-size: 14px; color: var(--mut); max-width: 300px; line-height: 1.6; }
+.info-box {
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 18px 20px; max-width: 320px; width: 100%;
+}
+.info-box p { font-size: 13px; color: rgba(255,255,255,.45); line-height: 1.7; }
+.info-box strong { color: var(--yel); }
+.btn-sec {
+  width: 100%; max-width: 320px; padding: 14px;
+  background: rgba(255,255,255,.07);
+  border: 1px solid var(--border); border-radius: var(--r);
+  color: var(--txt); font-size: 15px; font-weight: 600;
+  cursor: pointer; font-family: 'Space Grotesk', sans-serif;
+}
 </style>
 </head>
 <body>
 
-<div id="entry">
-  <p class="logo">AR Projector Pro</p>
-  <h1>Projete.<br><em>Pinte.</em></h1>
-  <p class="sub">Carregue sua referência e projete em tamanho real no chão ou muro.</p>
-  <div class="drop-zone" id="drop-zone">
-    <span class="icon">🖼️</span>
-    <p>Toque para escolher imagem</p>
-    <small>JPG · PNG · WEBP</small>
+<!-- ══ TELA INICIAL ══ -->
+<div id="screen-entry">
+  <p class="logo-tag">AR Traçador Pro</p>
+  <h1 class="main-title">Traça.<br><span class="acc">Pinta.</span></h1>
+  <p class="main-sub">Projete qualquer imagem sobre a câmera e use como guia para pintar.</p>
+
+  <div class="upload-card" id="upload-card">
+    <span class="upload-icon">🖼️</span>
+    <h3>Escolher imagem</h3>
+    <small>JPG · PNG · WEBP · SVG</small>
     <img id="thumb" alt="">
   </div>
   <input type="file" id="file-input" accept="image/*">
-  <button id="start-btn">Iniciar Projeção AR →</button>
+
+  <button id="btn-start">Abrir câmera →</button>
 </div>
 
-<canvas id="ar-canvas"></canvas>
+<!-- ══ VIEWER ══ -->
+<div id="viewer">
+  <video id="cam-video" autoplay playsinline muted></video>
+  <canvas id="overlay-canvas"></canvas>
+</div>
 
+<!-- ══ HUD ══ -->
 <div id="hud">
-  <div id="status-bar">
-    <div class="live-badge"><span class="live-dot"></span>AR Ativo</div>
-    <button id="exit-btn">✕ Sair</button>
+  <div id="top-bar">
+    <div class="badge"><span class="dot-live"></span>Câmera ativa</div>
+    <button id="btn-exit">✕ Sair</button>
   </div>
-  <div id="hint">Aponte para o chão ou muro…</div>
-  <div id="panel">
-    <div class="ctrl-card">
-      <p class="card-title">Ajustes da Projeção</p>
-      <div class="row">
-        <div class="lbl">Tamanho<small>escala</small></div>
-        <input type="range" id="s-scale" min="0.1" max="6" step="0.05" value="1">
-        <span class="val" id="v-scale">1.0</span>
+
+  <div id="center-hint">👆 Toque para mover · Dois dedos para zoom/girar</div>
+
+  <div id="bottom-panel">
+    <div class="sliders-card">
+      <p class="card-label">Ajustes</p>
+      <div class="sl-row">
+        <div class="sl-lbl">Opacidade<span>transparência</span></div>
+        <input type="range" id="sl-op" min="5" max="100" step="1" value="55">
+        <span class="sl-val" id="vl-op">55%</span>
       </div>
-      <div class="row">
-        <div class="lbl">Girar<small>graus</small></div>
-        <input type="range" id="s-rot" min="0" max="360" step="1" value="0">
-        <span class="val" id="v-rot">0°</span>
-      </div>
-      <div class="row">
-        <div class="lbl">Opacidade<small>transparência</small></div>
-        <input type="range" id="s-op" min="0.05" max="1" step="0.05" value="0.7">
-        <span class="val" id="v-op">70%</span>
+      <div class="sl-row">
+        <div class="sl-lbl">Brilho<span>luminosidade</span></div>
+        <input type="range" id="sl-br" min="50" max="200" step="5" value="100">
+        <span class="sl-val" id="vl-br">100%</span>
       </div>
     </div>
-    <div class="btns-row">
-      <button class="act-btn" id="btn-pin"><span class="ico">📌</span><span id="lbl-pin">Fixar</span></button>
-      <button class="act-btn" id="btn-flip"><span class="ico">↔️</span><span>Espelhar</span></button>
-      <button class="act-btn" id="btn-wall"><span class="ico" id="ico-wall">🧱</span><span id="lbl-wall">Muro</span></button>
+
+    <div class="actions-row">
+      <button class="act" id="btn-flip">
+        <span class="ico">↔️</span>Espelhar
+      </button>
+      <button class="act" id="btn-freeze">
+        <span class="ico" id="ico-freeze">🔒</span>
+        <span id="lbl-freeze">Travar</span>
+      </button>
+      <button class="act" id="btn-cam">
+        <span class="ico">🔄</span>Câmera
+      </button>
+      <button class="act" id="btn-new">
+        <span class="ico">🖼️</span>Trocar
+      </button>
     </div>
   </div>
 </div>
 
 <div id="toast"></div>
 
-<div id="no-ar">
-  <h2>📱 AR não disponível</h2>
-  <p>Seu navegador não suporta WebXR AR com hit-test.</p>
+<div id="no-cam">
+  <h2>📷 Sem acesso à câmera</h2>
+  <p>Permita o acesso à câmera quando o navegador pedir.</p>
   <div class="info-box">
-    <p>Use <strong>Chrome no Android</strong> (requer ARCore)<br>
-    ou <strong>Safari no iPhone</strong> iOS 16+.<br><br>
-    O arquivo deve estar em <strong>HTTPS</strong>.<br>
-    GitHub Pages, ngrok ou similar funcionam.</p>
+    <p>No <strong>iPhone</strong>: Ajustes → Safari → Câmera → Permitir<br>
+    No <strong>Android</strong>: toque no ícone de cadeado na barra de endereço → Câmera → Permitir</p>
   </div>
-  <button class="btn-back" id="btn-back">← Voltar</button>
+  <button class="btn-sec" id="btn-no-cam-back">← Voltar</button>
 </div>
 
 <script>
 (function(){
-  // DOM
-  const entry    = document.getElementById('entry');
-  const dropZone = document.getElementById('drop-zone');
-  const fileInput= document.getElementById('file-input');
-  const thumb    = document.getElementById('thumb');
-  const startBtn = document.getElementById('start-btn');
-  const arCanvas = document.getElementById('ar-canvas');
-  const hud      = document.getElementById('hud');
-  const hint     = document.getElementById('hint');
-  const noAr     = document.getElementById('no-ar');
-  const toast    = document.getElementById('toast');
-  const exitBtn  = document.getElementById('exit-btn');
-  const sScale   = document.getElementById('s-scale');
-  const sRot     = document.getElementById('s-rot');
-  const sOp      = document.getElementById('s-op');
-  const vScale   = document.getElementById('v-scale');
-  const vRot     = document.getElementById('v-rot');
-  const vOp      = document.getElementById('v-op');
-  const btnPin   = document.getElementById('btn-pin');
-  const btnFlip  = document.getElementById('btn-flip');
-  const btnWall  = document.getElementById('btn-wall');
 
-  // Estado
-  let imageDataUrl=null, imgAspect=1;
-  let isPinned=false, isFlipped=false, isWall=false;
-  let scale=1.0, rotDeg=0, opacity=0.7;
-  let surfaceFound=false;
-  let gl, xrSession, xrRefSpace, xrHitTestSource;
-  let imgTexture=null, prog=null, bufs=null;
+// ── DOM ──
+const entry      = document.getElementById('screen-entry');
+const uploadCard = document.getElementById('upload-card');
+const fileInput  = document.getElementById('file-input');
+const thumb      = document.getElementById('thumb');
+const btnStart   = document.getElementById('btn-start');
+const viewer     = document.getElementById('viewer');
+const camVideo   = document.getElementById('cam-video');
+const canvas     = document.getElementById('overlay-canvas');
+const ctx        = canvas.getContext('2d');
+const hud        = document.getElementById('hud');
+const centerHint = document.getElementById('center-hint');
+const noCam      = document.getElementById('no-cam');
+const toast      = document.getElementById('toast');
 
-  // matrix posição atual da imagem (4x4 col-major)
-  let imgMat=id4();
+const slOp = document.getElementById('sl-op');
+const slBr = document.getElementById('sl-br');
+const vlOp = document.getElementById('vl-op');
+const vlBr = document.getElementById('vl-br');
 
-  // Toast
-  let toastTimer;
-  function showToast(msg,ms=2400){
-    clearTimeout(toastTimer);
-    toast.textContent=msg;
-    toast.classList.add('show');
-    toastTimer=setTimeout(()=>toast.classList.remove('show'),ms);
+const btnFlip   = document.getElementById('btn-flip');
+const btnFreeze = document.getElementById('btn-freeze');
+const btnCam    = document.getElementById('btn-cam');
+const btnNew    = document.getElementById('btn-new');
+
+// ── Estado ──
+let imgEl       = null;
+let imgW = 0, imgH = 0;
+
+// Transformação da imagem
+let posX = 0, posY = 0;   // centro em px do canvas
+let scaleF  = 1.0;
+let angleDeg = 0;
+let opacity  = 0.55;
+let brightness = 1.0;
+let isFlipped  = false;
+let isLocked   = false;
+
+let camFacing = 'environment'; // traseira por padrão
+let stream    = null;
+
+let rafId = null;
+
+// ── Toast ──
+let toastTimer;
+function toast$(msg, ms=2200){
+  clearTimeout(toastTimer);
+  toast.textContent = msg;
+  toast.classList.add('show');
+  toastTimer = setTimeout(()=>toast.classList.remove('show'), ms);
+}
+
+// ── Carregar imagem ──
+uploadCard.addEventListener('click', ()=>fileInput.click());
+fileInput.addEventListener('change', ()=>{ if(fileInput.files[0]) loadFile(fileInput.files[0]); });
+
+function loadFile(file){
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    imgEl = img;
+    imgW = img.naturalWidth;
+    imgH = img.naturalHeight;
+    thumb.src = url;
+    thumb.style.display = 'block';
+    btnStart.style.display = 'flex';
+  };
+  img.src = url;
+}
+
+// ── Iniciar câmera ──
+btnStart.addEventListener('click', ()=>{ if(imgEl) startCamera(); });
+
+async function startCamera(){
+  try {
+    if(stream) stream.getTracks().forEach(t=>t.stop());
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: camFacing, width:{ideal:1920}, height:{ideal:1080} },
+      audio: false
+    });
+    camVideo.srcObject = stream;
+    await camVideo.play();
+
+    entry.style.display = 'none';
+    viewer.style.display = 'block';
+    hud.style.display    = 'block';
+
+    resizeCanvas();
+    resetImageTransform();
+    startRender();
+
+    // Esconde hint após 4s
+    setTimeout(()=>{ centerHint.style.opacity='0'; }, 4000);
+  } catch(e) {
+    console.error(e);
+    noCam.style.display = 'flex';
   }
+}
 
-  // Carregar imagem
-  dropZone.addEventListener('click',()=>fileInput.click());
-  fileInput.addEventListener('change',()=>{ if(fileInput.files[0]) loadImg(fileInput.files[0]); });
+function resizeCanvas(){
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
 
-  function loadImg(file){
-    const r=new FileReader();
-    r.onload=e=>{
-      imageDataUrl=e.target.result;
-      const img=new Image();
-      img.onload=()=>{
-        imgAspect=img.width/img.height;
-        thumb.src=imageDataUrl;
-        thumb.style.display='block';
-        startBtn.style.display='flex';
-      };
-      img.src=imageDataUrl;
-    };
-    r.readAsDataURL(file);
+function resetImageTransform(){
+  // Posiciona a imagem centrada, escalada para caber em ~60% da tela
+  posX = canvas.width  / 2;
+  posY = canvas.height / 2;
+  const fitW = canvas.width  * 0.6;
+  const fitH = canvas.height * 0.6;
+  scaleF = Math.min(fitW / imgW, fitH / imgH);
+  angleDeg = 0;
+}
+
+// ── Loop de render ──
+function startRender(){
+  if(rafId) cancelAnimationFrame(rafId);
+  function frame(){
+    rafId = requestAnimationFrame(frame);
+    drawFrame();
   }
+  frame();
+}
 
-  // Iniciar AR
-  startBtn.addEventListener('click',async()=>{
-    if(!imageDataUrl) return;
-    if(!navigator.xr){ showNoAR(); return; }
-    let ok=false;
-    try{ ok=await navigator.xr.isSessionSupported('immersive-ar'); }catch(e){}
-    if(!ok){ showNoAR(); return; }
-    try{
-      // Esta linha abre a câmera nativamente
-      xrSession=await navigator.xr.requestSession('immersive-ar',{
-        requiredFeatures:['hit-test'],
-        optionalFeatures:['dom-overlay'],
-        domOverlay:{root:hud}
-      });
-      initXR();
-    }catch(e){
-      console.error(e);
-      showToast('Erro: '+e.message, 4000);
+function drawFrame(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(!imgEl) return;
+
+  ctx.save();
+  ctx.globalAlpha = opacity;
+  ctx.filter = `brightness(${brightness})`;
+
+  ctx.translate(posX, posY);
+  ctx.rotate(angleDeg * Math.PI / 180);
+  if(isFlipped) ctx.scale(-1,1);
+
+  const w = imgW * scaleF;
+  const h = imgH * scaleF;
+  ctx.drawImage(imgEl, -w/2, -h/2, w, h);
+
+  ctx.restore();
+}
+
+// ── Sair ──
+document.getElementById('btn-exit').addEventListener('click', stopCamera);
+document.getElementById('btn-no-cam-back').addEventListener('click', ()=>{
+  noCam.style.display='none';
+  entry.style.display='flex';
+});
+
+function stopCamera(){
+  if(stream) stream.getTracks().forEach(t=>t.stop());
+  stream = null;
+  if(rafId) cancelAnimationFrame(rafId);
+  viewer.style.display = 'none';
+  hud.style.display    = 'none';
+  entry.style.display  = 'flex';
+  centerHint.style.opacity = '1';
+}
+
+// ── Sliders ──
+slOp.addEventListener('input', e=>{
+  opacity = parseInt(e.target.value)/100;
+  vlOp.textContent = e.target.value+'%';
+});
+
+slBr.addEventListener('input', e=>{
+  brightness = parseInt(e.target.value)/100;
+  vlBr.textContent = e.target.value+'%';
+});
+
+// ── Botões ──
+btnFlip.addEventListener('click', ()=>{
+  isFlipped = !isFlipped;
+  btnFlip.classList.toggle('on', isFlipped);
+  toast$(isFlipped ? 'Espelhada!' : 'Espelho removido.');
+});
+
+btnFreeze.addEventListener('click', ()=>{
+  isLocked = !isLocked;
+  btnFreeze.classList.toggle('grn', isLocked);
+  document.getElementById('ico-freeze').textContent = isLocked ? '🔒' : '🔓';
+  document.getElementById('lbl-freeze').textContent = isLocked ? 'Travada' : 'Travar';
+  toast$(isLocked ? '🔒 Travada — pode pintar!' : '🔓 Desbloqueada.');
+});
+
+btnCam.addEventListener('click', async ()=>{
+  camFacing = camFacing === 'environment' ? 'user' : 'environment';
+  await startCamera();
+  toast$('Câmera trocada.');
+});
+
+btnNew.addEventListener('click', ()=>{
+  fileInput.click();
+});
+
+fileInput.addEventListener('change', ()=>{
+  if(fileInput.files[0] && viewer.style.display !== 'none'){
+    loadFile(fileInput.files[0]);
+    // Reinicia posição ao trocar imagem
+    setTimeout(()=>{
+      resizeCanvas();
+      resetImageTransform();
+    }, 200);
+  }
+});
+
+// ── Resize ──
+window.addEventListener('resize', ()=>{ resizeCanvas(); });
+
+// ══════════════════════════════════════════
+//  GESTOS MULTI-TOUCH (move / pinch / rotate)
+// ══════════════════════════════════════════
+
+let touch1 = null, touch2 = null;
+let lastDist  = 0;
+let lastAngle = 0;
+let lastMidX  = 0, lastMidY = 0;
+
+canvas.addEventListener('touchstart', e=>{
+  e.preventDefault();
+  if(isLocked) return;
+  if(e.touches.length === 1){
+    touch1 = e.touches[0];
+    touch2 = null;
+  } else if(e.touches.length >= 2){
+    touch1 = e.touches[0];
+    touch2 = e.touches[1];
+    lastDist  = getDist(touch1, touch2);
+    lastAngle = getAngle(touch1, touch2);
+    lastMidX  = (touch1.clientX + touch2.clientX)/2;
+    lastMidY  = (touch1.clientY + touch2.clientY)/2;
+  }
+}, {passive:false});
+
+canvas.addEventListener('touchmove', e=>{
+  e.preventDefault();
+  if(isLocked) return;
+
+  if(e.touches.length === 1 && touch2 === null){
+    // Move com 1 dedo
+    const t = e.touches[0];
+    const dx = t.clientX - touch1.clientX;
+    const dy = t.clientY - touch1.clientY;
+    posX += dx;
+    posY += dy;
+    touch1 = t;
+
+  } else if(e.touches.length >= 2){
+    const t1 = e.touches[0];
+    const t2 = e.touches[1];
+
+    const dist  = getDist(t1, t2);
+    const angle = getAngle(t1, t2);
+    const midX  = (t1.clientX + t2.clientX)/2;
+    const midY  = (t1.clientY + t2.clientY)/2;
+
+    // Escala
+    if(lastDist > 0){
+      scaleF *= dist / lastDist;
+      scaleF = Math.max(0.05, Math.min(20, scaleF));
     }
-  });
 
-  function showNoAR(){ noAr.style.display='flex'; entry.style.display='none'; }
-  document.getElementById('btn-back').addEventListener('click',()=>{ noAr.style.display='none'; entry.style.display='flex'; });
-
-  async function initXR(){
-    entry.style.display='none';
-
-    // WebGL context compatível com XR
-    gl=arCanvas.getContext('webgl2',{xrCompatible:true})
-      || arCanvas.getContext('webgl',{xrCompatible:true});
-    await gl.makeXRCompatible();
-
-    // Shaders
-    const vs=`
-      attribute vec4 aPos;
-      attribute vec2 aUV;
-      uniform mat4 uMVP;
-      uniform float uFlip;
-      varying vec2 vUV;
-      void main(){
-        gl_Position=uMVP*aPos;
-        vUV=vec2(uFlip>0.5?1.0-aUV.x:aUV.x, aUV.y);
-      }`;
-    const fs=`
-      precision mediump float;
-      varying vec2 vUV;
-      uniform sampler2D uTex;
-      uniform float uOp;
-      void main(){
-        vec4 c=texture2D(uTex,vUV);
-        gl_FragColor=vec4(c.rgb,c.a*uOp);
-      }`;
-
-    prog=mkProg(gl,vs,fs);
-
-    // Quad plano: pos(3)+uv(2), deitado em XZ
-    const verts=new Float32Array([
-      -0.5,0,-0.5, 0,1,
-       0.5,0,-0.5, 1,1,
-       0.5,0, 0.5, 1,0,
-      -0.5,0, 0.5, 0,0
-    ]);
-    const idxs=new Uint16Array([0,1,2,0,2,3]);
-    const vb=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,vb); gl.bufferData(gl.ARRAY_BUFFER,verts,gl.STATIC_DRAW);
-    const ib=gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,idxs,gl.STATIC_DRAW);
-    bufs={vb,ib};
-
-    // Textura
-    imgTexture=gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D,imgTexture);
-    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
-    const img=new Image();
-    img.onload=()=>{ gl.bindTexture(gl.TEXTURE_2D,imgTexture); gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,img); };
-    img.src=imageDataUrl;
-
-    // XR Layer e spaces
-    const layer=new XRWebGLLayer(xrSession,gl);
-    xrSession.updateRenderState({baseLayer:layer});
-    xrRefSpace=await xrSession.requestReferenceSpace('local');
-    const viewerSpace=await xrSession.requestReferenceSpace('viewer');
-    xrHitTestSource=await xrSession.requestHitTestSource({space:viewerSpace});
-
-    arCanvas.style.display='block';
-    hud.style.display='block';
-    xrSession.addEventListener('end',onEnd);
-    xrSession.requestAnimationFrame(onFrame);
-  }
-
-  function onFrame(t,frame){
-    xrSession.requestAnimationFrame(onFrame);
-    const layer=xrSession.renderState.baseLayer;
-    const pose=frame.getViewerPose(xrRefSpace);
-    if(!pose) return;
-
-    // Hit test
-    const hits=frame.getHitTestResults(xrHitTestSource);
-    if(hits.length>0 && !isPinned){
-      const hp=hits[0].getPose(xrRefSpace);
-      fromPose(imgMat, hp.transform.position, hp.transform.orientation);
-      if(!surfaceFound){
-        surfaceFound=true;
-        hint.textContent='Superfície detectada — toque em Fixar para travar';
-      }
-    }
-
-    // Render
-    gl.bindFramebuffer(gl.FRAMEBUFFER,layer.framebuffer);
-    gl.clearColor(0,0,0,0);
-    gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
-
-    for(const view of pose.views){
-      const vp=layer.getViewport(view);
-      gl.viewport(vp.x,vp.y,vp.width,vp.height);
-      const mvp=mul4(mul4(view.projectionMatrix, view.transform.inverse.matrix), buildModel());
-      draw(mvp);
-    }
-  }
-
-  function buildModel(){
-    // Escala (aspecto real da imagem)
-    const sx=scale*imgAspect, sy=scale, sz=scale;
-    const S=mScale(sx,sy,sz);
     // Rotação
-    const rotR=rotDeg*Math.PI/180;
-    const R=isWall ? mRotZ(rotR) : mRotY(rotR);
-    // Modo muro: inclina o plano para ficar vertical
-    const W=isWall ? mRotX(-Math.PI/2) : id4();
-    // base * W * R * S
-    return mul4(mul4(mul4(new Float32Array(imgMat), W), R), S);
+    const dAngle = angle - lastAngle;
+    angleDeg += dAngle * (180/Math.PI);
+
+    // Pan do ponto médio
+    posX += midX - lastMidX;
+    posY += midY - lastMidY;
+
+    lastDist  = dist;
+    lastAngle = angle;
+    lastMidX  = midX;
+    lastMidY  = midY;
+    touch1 = t1; touch2 = t2;
   }
+}, {passive:false});
 
-  function draw(mvp){
-    gl.useProgram(prog.p);
-    gl.bindBuffer(gl.ARRAY_BUFFER,bufs.vb);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,bufs.ib);
-    const stride=5*4;
-    gl.enableVertexAttribArray(prog.aPos);
-    gl.vertexAttribPointer(prog.aPos,3,gl.FLOAT,false,stride,0);
-    gl.enableVertexAttribArray(prog.aUV);
-    gl.vertexAttribPointer(prog.aUV,2,gl.FLOAT,false,stride,12);
-    gl.uniformMatrix4fv(prog.uMVP,false,mvp);
-    gl.uniform1f(prog.uOp,opacity);
-    gl.uniform1f(prog.uFlip,isFlipped?1:0);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D,imgTexture);
-    gl.uniform1i(prog.uTex,0);
-    gl.drawElements(gl.TRIANGLES,6,gl.UNSIGNED_SHORT,0);
-  }
+canvas.addEventListener('touchend', e=>{
+  if(e.touches.length === 0){ touch1=null; touch2=null; }
+  else if(e.touches.length === 1){ touch1=e.touches[0]; touch2=null; }
+});
 
-  function onEnd(){
-    arCanvas.style.display='none';
-    hud.style.display='none';
-    entry.style.display='flex';
-    surfaceFound=false; isPinned=false;
-    hint.textContent='Aponte para o chão ou muro…';
-    btnPin.classList.remove('on');
-    document.getElementById('lbl-pin').textContent='Fixar';
-    xrSession=null;
-  }
+// Mouse (desktop debug)
+let mouseDown = false, lastMX=0, lastMY=0;
+canvas.addEventListener('mousedown', e=>{ mouseDown=true; lastMX=e.clientX; lastMY=e.clientY; });
+canvas.addEventListener('mousemove', e=>{
+  if(!mouseDown || isLocked) return;
+  posX += e.clientX - lastMX;
+  posY += e.clientY - lastMY;
+  lastMX=e.clientX; lastMY=e.clientY;
+});
+canvas.addEventListener('mouseup', ()=>mouseDown=false);
+canvas.addEventListener('wheel', e=>{
+  if(isLocked) return;
+  e.preventDefault();
+  scaleF *= e.deltaY < 0 ? 1.05 : 0.95;
+  scaleF = Math.max(0.05, Math.min(20, scaleF));
+}, {passive:false});
 
-  exitBtn.addEventListener('click',()=>{ if(xrSession) xrSession.end(); });
+// Helpers geométricos
+function getDist(a,b){
+  const dx=a.clientX-b.clientX, dy=a.clientY-b.clientY;
+  return Math.sqrt(dx*dx+dy*dy);
+}
+function getAngle(a,b){
+  return Math.atan2(b.clientY-a.clientY, b.clientX-a.clientX);
+}
 
-  // Sliders
-  sScale.addEventListener('input',e=>{ scale=parseFloat(e.target.value); vScale.textContent=scale.toFixed(1); });
-  sRot.addEventListener('input',e=>{ rotDeg=parseInt(e.target.value); vRot.textContent=rotDeg+'°'; });
-  sOp.addEventListener('input',e=>{ opacity=parseFloat(e.target.value); vOp.textContent=Math.round(opacity*100)+'%'; });
-
-  btnPin.addEventListener('click',()=>{
-    isPinned=!isPinned;
-    btnPin.classList.toggle('on',isPinned);
-    document.getElementById('lbl-pin').textContent=isPinned?'Soltar':'Fixar';
-    hint.textContent=isPinned?'📌 Fixado! Pode pintar.':'Mova para reposicionar…';
-    showToast(isPinned?'Imagem fixada — pode pintar!':'Imagem liberada.');
-  });
-
-  btnFlip.addEventListener('click',()=>{
-    isFlipped=!isFlipped;
-    btnFlip.classList.toggle('on',isFlipped);
-    showToast(isFlipped?'Espelho ativado.':'Espelho removido.');
-  });
-
-  btnWall.addEventListener('click',()=>{
-    isWall=!isWall;
-    btnWall.classList.toggle('on-green',isWall);
-    document.getElementById('lbl-wall').textContent=isWall?'Chão':'Muro';
-    document.getElementById('ico-wall').textContent=isWall?'🏠':'🧱';
-    showToast(isWall?'Modo Muro: aponte para uma parede.':'Modo Chão: aponte para o chão.');
-  });
-
-  // ── Math helpers ──
-  function id4(){ const m=new Float32Array(16); m[0]=m[5]=m[10]=m[15]=1; return m; }
-
-  function fromPose(out, pos, ori){
-    const {x:qx,y:qy,z:qz,w:qw}=ori, {x,y,z}=pos;
-    out[0]=1-2*(qy*qy+qz*qz); out[1]=2*(qx*qy+qz*qw); out[2]=2*(qx*qz-qy*qw); out[3]=0;
-    out[4]=2*(qx*qy-qz*qw); out[5]=1-2*(qx*qx+qz*qz); out[6]=2*(qy*qz+qx*qw); out[7]=0;
-    out[8]=2*(qx*qz+qy*qw); out[9]=2*(qy*qz-qx*qw); out[10]=1-2*(qx*qx+qy*qy); out[11]=0;
-    out[12]=x; out[13]=y; out[14]=z; out[15]=1;
-  }
-
-  function mul4(a,b){
-    const r=new Float32Array(16);
-    for(let i=0;i<4;i++) for(let j=0;j<4;j++){
-      let s=0; for(let k=0;k<4;k++) s+=a[i+k*4]*b[k+j*4]; r[i+j*4]=s;
-    }
-    return r;
-  }
-
-  function mScale(sx,sy,sz){ const m=id4(); m[0]=sx; m[5]=sy; m[10]=sz; return m; }
-  function mRotY(a){ const m=id4(),c=Math.cos(a),s=Math.sin(a); m[0]=c;m[8]=s;m[2]=-s;m[10]=c; return m; }
-  function mRotX(a){ const m=id4(),c=Math.cos(a),s=Math.sin(a); m[5]=c;m[6]=s;m[9]=-s;m[10]=c; return m; }
-  function mRotZ(a){ const m=id4(),c=Math.cos(a),s=Math.sin(a); m[0]=c;m[1]=s;m[4]=-s;m[5]=c; return m; }
-
-  function mkProg(gl,vs,fs){
-    function sh(t,src){const s=gl.createShader(t);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))console.error(gl.getShaderInfoLog(s));return s;}
-    const p=gl.createProgram();
-    gl.attachShader(p,sh(gl.VERTEX_SHADER,vs));
-    gl.attachShader(p,sh(gl.FRAGMENT_SHADER,fs));
-    gl.linkProgram(p);
-    return{p,aPos:gl.getAttribLocation(p,'aPos'),aUV:gl.getAttribLocation(p,'aUV'),uMVP:gl.getUniformLocation(p,'uMVP'),uTex:gl.getUniformLocation(p,'uTex'),uOp:gl.getUniformLocation(p,'uOp'),uFlip:gl.getUniformLocation(p,'uFlip')};
-  }
 })();
 </script>
 </body>

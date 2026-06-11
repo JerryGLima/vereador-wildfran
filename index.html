@@ -1,1007 +1,430 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-    <title>AR Projector Pro</title>
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap');
-
-        :root {
-            --ink: #0a0a0a;
-            --surface: rgba(10, 10, 10, 0.92);
-            --surface-light: rgba(28, 28, 30, 0.95);
-            --border: rgba(255,255,255,0.08);
-            --accent: #FF3B00;
-            --accent2: #FFD60A;
-            --text: #F5F5F0;
-            --muted: #888;
-            --track: rgba(255,255,255,0.12);
-            --radius: 14px;
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        body {
-            font-family: 'Space Grotesk', sans-serif;
-            background: #000;
-            overflow: hidden;
-            height: 100dvh;
-        }
-
-        /* ── TELA DE ENTRADA ── */
-        #entry-screen {
-            position: fixed;
-            inset: 0;
-            background: var(--ink);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            padding: 32px 24px;
-            gap: 0;
-        }
-
-        .entry-logo {
-            font-family: 'Space Mono', monospace;
-            font-size: 11px;
-            letter-spacing: 0.28em;
-            text-transform: uppercase;
-            color: var(--muted);
-            margin-bottom: 40px;
-        }
-
-        .entry-title {
-            font-size: clamp(36px, 10vw, 56px);
-            font-weight: 700;
-            color: var(--text);
-            line-height: 1.0;
-            text-align: center;
-            margin-bottom: 8px;
-        }
-
-        .entry-title span {
-            color: var(--accent);
-        }
-
-        .entry-sub {
-            font-size: 15px;
-            color: var(--muted);
-            text-align: center;
-            max-width: 300px;
-            line-height: 1.5;
-            margin-bottom: 48px;
-        }
-
-        .drop-zone {
-            width: 100%;
-            max-width: 340px;
-            border: 1.5px dashed rgba(255,255,255,0.2);
-            border-radius: var(--radius);
-            padding: 40px 24px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 12px;
-            cursor: pointer;
-            transition: border-color 0.2s, background 0.2s;
-            position: relative;
-        }
-
-        .drop-zone:active, .drop-zone.drag-over {
-            border-color: var(--accent);
-            background: rgba(255,59,0,0.06);
-        }
-
-        .drop-icon {
-            font-size: 40px;
-            line-height: 1;
-        }
-
-        .drop-zone p {
-            font-size: 15px;
-            color: var(--text);
-            font-weight: 500;
-            text-align: center;
-        }
-
-        .drop-zone small {
-            font-size: 12px;
-            color: var(--muted);
-        }
-
-        #file-input { display: none; }
-
-        .entry-start {
-            width: 100%;
-            max-width: 340px;
-            padding: 16px;
-            background: var(--accent);
-            color: white;
-            border: none;
-            border-radius: var(--radius);
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            margin-top: 16px;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            transition: opacity 0.2s;
-        }
-
-        .entry-start:active { opacity: 0.8; }
-        .entry-start.visible { display: flex; }
-
-        .preview-thumb {
-            width: 80px;
-            height: 80px;
-            object-fit: cover;
-            border-radius: 10px;
-            border: 2px solid var(--accent);
-            display: none;
-        }
-        .preview-thumb.visible { display: block; }
-
-        /* ── CENA AR ── */
-        a-scene { display: block; }
-        .a-enter-vr-button { display: none !important; }
-
-        /* ── PAINEL DE CONTROLES AR ── */
-        #ar-ui {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            z-index: 100;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            padding: 0 16px 24px;
-            pointer-events: none;
-            gap: 10px;
-        }
-
-        #ar-ui.active { display: flex; }
-
-        /* Barra de status no topo */
-        #ar-status-bar {
-            position: fixed;
-            top: 0; left: 0; right: 0;
-            z-index: 101;
-            display: none;
-            align-items: center;
-            justify-content: space-between;
-            padding: 16px 20px;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
-            pointer-events: none;
-        }
-
-        #ar-status-bar.active { display: flex; }
-
-        .status-label {
-            font-family: 'Space Mono', monospace;
-            font-size: 11px;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-            color: rgba(255,255,255,0.6);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .status-dot {
-            width: 6px; height: 6px;
-            border-radius: 50%;
-            background: var(--accent2);
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
-
-        .btn-exit {
-            pointer-events: auto;
-            background: rgba(255,255,255,0.12);
-            border: none;
-            color: white;
-            font-size: 12px;
-            font-family: 'Space Grotesk', sans-serif;
-            font-weight: 500;
-            padding: 6px 12px;
-            border-radius: 20px;
-            cursor: pointer;
-        }
-
-        /* Painel de sliders */
-        .controls-panel {
-            width: 100%;
-            max-width: 380px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 16px 18px;
-            pointer-events: auto;
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-        }
-
-        .panel-title {
-            font-family: 'Space Mono', monospace;
-            font-size: 10px;
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-            color: var(--muted);
-            margin-bottom: 14px;
-        }
-
-        .slider-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
-        }
-
-        .slider-row:last-child { margin-bottom: 0; }
-
-        .slider-label {
-            font-size: 12px;
-            font-weight: 500;
-            color: rgba(255,255,255,0.7);
-            width: 88px;
-            flex-shrink: 0;
-        }
-
-        .slider-label small {
-            display: block;
-            font-size: 10px;
-            color: var(--muted);
-            font-weight: 400;
-        }
-
-        input[type="range"] {
-            -webkit-appearance: none;
-            flex: 1;
-            height: 3px;
-            background: var(--track);
-            border-radius: 2px;
-            outline: none;
-        }
-
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 18px; height: 18px;
-            border-radius: 50%;
-            background: var(--text);
-            border: 2px solid var(--accent);
-            cursor: pointer;
-        }
-
-        .slider-val {
-            font-family: 'Space Mono', monospace;
-            font-size: 11px;
-            color: var(--accent2);
-            width: 32px;
-            text-align: right;
-            flex-shrink: 0;
-        }
-
-        /* Botões de ação */
-        .actions-row {
-            display: flex;
-            gap: 8px;
-            width: 100%;
-            max-width: 380px;
-            pointer-events: auto;
-        }
-
-        .action-btn {
-            flex: 1;
-            padding: 14px 10px;
-            border: none;
-            border-radius: var(--radius);
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 13px;
-            font-weight: 700;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            transition: opacity 0.15s, transform 0.1s;
-            line-height: 1.2;
-        }
-
-        .action-btn:active { opacity: 0.75; transform: scale(0.97); }
-
-        .action-btn .btn-icon { font-size: 20px; }
-
-        .btn-pin {
-            background: var(--surface-light);
-            color: var(--text);
-            border: 1px solid var(--border);
-        }
-
-        .btn-pin.pinned {
-            background: var(--accent2);
-            color: #000;
-            border-color: transparent;
-        }
-
-        .btn-flip {
-            background: var(--surface-light);
-            color: var(--text);
-            border: 1px solid var(--border);
-        }
-
-        .btn-wall {
-            background: var(--surface-light);
-            color: var(--text);
-            border: 1px solid var(--border);
-        }
-
-        .btn-wall.active {
-            background: #30D158;
-            color: #000;
-            border-color: transparent;
-        }
-
-        /* Dica de posicionamento */
-        #placement-hint {
-            font-family: 'Space Mono', monospace;
-            font-size: 11px;
-            letter-spacing: 0.1em;
-            color: rgba(255,255,255,0.5);
-            text-align: center;
-            padding: 6px 16px;
-            pointer-events: none;
-        }
-
-        /* Reticle overlay customizado */
-        #reticle-hint {
-            position: fixed;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            z-index: 50;
-            display: none;
-        }
-
-        #reticle-hint svg { opacity: 0.7; }
-
-        /* Toast notification */
-        #toast {
-            position: fixed;
-            top: 80px; left: 50%;
-            transform: translateX(-50%) translateY(-10px);
-            background: rgba(255,255,255,0.12);
-            backdrop-filter: blur(12px);
-            color: white;
-            font-size: 13px;
-            font-weight: 500;
-            padding: 10px 20px;
-            border-radius: 20px;
-            z-index: 200;
-            opacity: 0;
-            transition: opacity 0.25s, transform 0.25s;
-            pointer-events: none;
-            white-space: nowrap;
-        }
-
-        #toast.show {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
-
-        /* ── OVERLAY DE PREVIEW (antes de entrar no AR) ── */
-        #preview-overlay {
-            position: fixed;
-            inset: 0;
-            z-index: 8000;
-            background: #000;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 20px;
-            padding: 24px;
-        }
-
-        #preview-overlay.active { display: flex; }
-
-        #preview-overlay h2 {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--text);
-            text-align: center;
-        }
-
-        #preview-overlay p {
-            font-size: 14px;
-            color: var(--muted);
-            text-align: center;
-            max-width: 300px;
-            line-height: 1.5;
-        }
-
-        #preview-img {
-            max-width: 280px;
-            max-height: 300px;
-            object-fit: contain;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-        }
-
-        .two-btns {
-            display: flex;
-            gap: 10px;
-            width: 100%;
-            max-width: 340px;
-        }
-
-        .btn-secondary {
-            flex: 1;
-            padding: 14px;
-            background: var(--surface-light);
-            color: var(--text);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .btn-primary {
-            flex: 2;
-            padding: 14px;
-            background: var(--accent);
-            color: white;
-            border: none;
-            border-radius: var(--radius);
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 14px;
-            font-weight: 700;
-            cursor: pointer;
-        }
-
-        /* Modo não-AR (fallback desktop) */
-        #desktop-fallback {
-            position: fixed;
-            inset: 0;
-            background: #111;
-            z-index: 7000;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 16px;
-            padding: 32px;
-        }
-
-        #desktop-fallback.active { display: flex; }
-
-        #desktop-fallback h2 {
-            font-size: 22px; font-weight: 700;
-            color: var(--text); text-align: center;
-        }
-
-        #desktop-fallback p {
-            font-size: 14px; color: var(--muted);
-            text-align: center; max-width: 360px; line-height: 1.6;
-        }
-
-        .qr-note {
-            background: var(--surface-light);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 20px 24px;
-            text-align: center;
-            max-width: 340px;
-        }
-
-        .qr-note p { font-size: 13px; color: rgba(255,255,255,0.6); }
-        .qr-note strong { color: var(--accent2); }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>AR Projector Pro</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Space+Mono&display=swap');
+  :root{--bg:#0a0a0a;--sur:rgba(18,18,20,.95);--brd:rgba(255,255,255,.09);--acc:#FF3B00;--yel:#FFD60A;--grn:#30D158;--txt:#F0F0EC;--mut:#666;--r:14px}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--txt);height:100dvh;overflow:hidden}
+
+  /* ENTRADA */
+  #entry{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;background:var(--bg);z-index:100}
+  #entry .logo{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--mut);margin-bottom:36px}
+  #entry h1{font-size:clamp(42px,12vw,64px);font-weight:700;line-height:1;text-align:center;margin-bottom:10px}
+  #entry h1 em{color:var(--acc);font-style:normal}
+  #entry .sub{font-size:15px;color:var(--mut);text-align:center;max-width:280px;line-height:1.5;margin-bottom:44px}
+
+  .drop-zone{width:100%;max-width:340px;border:1.5px dashed rgba(255,255,255,.18);border-radius:var(--r);padding:36px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;transition:border-color .2s,background .2s}
+  .drop-zone:active{border-color:var(--acc);background:rgba(255,59,0,.06)}
+  .drop-zone .icon{font-size:38px}
+  .drop-zone p{font-size:15px;font-weight:600}
+  .drop-zone small{font-size:12px;color:var(--mut)}
+  #thumb{width:72px;height:72px;object-fit:cover;border-radius:10px;border:2px solid var(--acc);display:none;margin-top:4px}
+  #file-input{display:none}
+  #start-btn{width:100%;max-width:340px;padding:16px;margin-top:16px;background:var(--acc);color:#fff;border:none;border-radius:var(--r);font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;cursor:pointer;display:none;align-items:center;justify-content:center;gap:8px}
+  #start-btn:active{opacity:.8}
+
+  /* CANVAS */
+  #ar-canvas{position:fixed;inset:0;display:none;touch-action:none}
+
+  /* HUD */
+  #hud{position:fixed;inset:0;display:none;pointer-events:none;z-index:50}
+  #status-bar{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:52px 20px 16px;background:linear-gradient(to bottom,rgba(0,0,0,.65),transparent);pointer-events:none}
+  .live-badge{display:flex;align-items:center;gap:7px;font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.7)}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:var(--yel);animation:blink 1.4s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+  #exit-btn{pointer-events:auto;background:rgba(255,255,255,.12);border:none;color:#fff;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;padding:7px 14px;border-radius:20px;cursor:pointer}
+  #hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Space Mono',monospace;font-size:12px;letter-spacing:.1em;color:rgba(255,255,255,.55);text-align:center;background:rgba(0,0,0,.4);padding:8px 18px;border-radius:20px;pointer-events:none;transition:opacity .4s;white-space:nowrap}
+  #panel{position:absolute;bottom:0;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:10px;padding:0 16px 30px;pointer-events:none}
+  .ctrl-card{width:100%;max-width:380px;background:var(--sur);border:1px solid var(--brd);border-radius:var(--r);padding:14px 16px;pointer-events:auto;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)}
+  .card-title{font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--mut);margin-bottom:12px}
+  .row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .row:last-child{margin-bottom:0}
+  .lbl{font-size:12px;font-weight:600;color:rgba(255,255,255,.65);width:82px;flex-shrink:0}
+  .lbl small{display:block;font-size:9px;color:var(--mut);font-weight:400}
+  input[type=range]{-webkit-appearance:none;flex:1;height:3px;border-radius:2px;background:rgba(255,255,255,.14);outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--txt);border:2.5px solid var(--acc);cursor:pointer}
+  .val{font-family:'Space Mono',monospace;font-size:11px;color:var(--yel);width:34px;text-align:right;flex-shrink:0}
+  .btns-row{width:100%;max-width:380px;display:flex;gap:8px;pointer-events:auto}
+  .act-btn{flex:1;padding:13px 6px;border:1px solid var(--brd);border-radius:var(--r);background:rgba(28,28,30,.95);color:var(--txt);font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:opacity .15s,transform .1s;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+  .act-btn:active{opacity:.7;transform:scale(.96)}
+  .act-btn .ico{font-size:20px}
+  .act-btn.on{background:var(--yel);color:#000;border-color:transparent}
+  .act-btn.on-green{background:var(--grn);color:#000;border-color:transparent}
+
+  /* TOAST */
+  #toast{position:fixed;top:110px;left:50%;transform:translateX(-50%) translateY(-8px);background:rgba(255,255,255,.13);backdrop-filter:blur(14px);color:#fff;font-size:13px;font-weight:600;padding:9px 20px;border-radius:20px;z-index:200;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;white-space:nowrap}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* SEM SUPORTE */
+  #no-ar{position:fixed;inset:0;z-index:300;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;padding:32px;gap:16px;text-align:center}
+  #no-ar h2{font-size:24px}
+  #no-ar p{font-size:14px;color:var(--mut);max-width:320px;line-height:1.6}
+  .info-box{background:rgba(255,255,255,.05);border:1px solid var(--brd);border-radius:var(--r);padding:18px 22px;max-width:340px;width:100%}
+  .info-box p{font-size:13px;color:rgba(255,255,255,.5);line-height:1.7}
+  .info-box strong{color:var(--yel)}
+  .btn-back{width:100%;max-width:340px;padding:14px;background:rgba(255,255,255,.08);border:1px solid var(--brd);border-radius:var(--r);color:var(--txt);font-size:15px;font-weight:600;cursor:pointer;font-family:'Space Grotesk',sans-serif}
+</style>
 </head>
 <body>
 
-<!-- ══════════════════════════════════════
-     TELA DE ENTRADA
-══════════════════════════════════════ -->
-<div id="entry-screen">
-    <p class="entry-logo">AR Projector Pro</p>
-
-    <h1 class="entry-title">Projete.<br>Pinte.<span>.</span></h1>
-    <p class="entry-sub">Carregue sua referência e projete em tamanho real no chão ou muro.</p>
-
-    <div class="drop-zone" id="drop-zone">
-        <span class="drop-icon">🖼️</span>
-        <p>Toque para escolher imagem</p>
-        <small>JPG, PNG ou SVG</small>
-        <img id="thumb" class="preview-thumb" alt="preview">
-    </div>
-    <input type="file" id="file-input" accept="image/*">
-
-    <button class="entry-start" id="start-btn">
-        <span>Iniciar Projeção AR</span> <span>→</span>
-    </button>
+<div id="entry">
+  <p class="logo">AR Projector Pro</p>
+  <h1>Projete.<br><em>Pinte.</em></h1>
+  <p class="sub">Carregue sua referência e projete em tamanho real no chão ou muro.</p>
+  <div class="drop-zone" id="drop-zone">
+    <span class="icon">🖼️</span>
+    <p>Toque para escolher imagem</p>
+    <small>JPG · PNG · WEBP</small>
+    <img id="thumb" alt="">
+  </div>
+  <input type="file" id="file-input" accept="image/*">
+  <button id="start-btn">Iniciar Projeção AR →</button>
 </div>
 
-<!-- ══════════════════════════════════════
-     PREVIEW ANTES DE ENTRAR NO AR
-══════════════════════════════════════ -->
-<div id="preview-overlay">
-    <h2>Pronto para projetar</h2>
-    <img id="preview-img" alt="imagem selecionada">
-    <p>Aponte a câmera para o chão ou muro onde deseja projetar. Quando encontrar a superfície, a imagem aparecerá automaticamente.</p>
-    <div class="two-btns">
-        <button class="btn-secondary" id="btn-back-preview">← Trocar</button>
-        <button class="btn-primary" id="btn-enter-ar">Entrar no AR →</button>
+<canvas id="ar-canvas"></canvas>
+
+<div id="hud">
+  <div id="status-bar">
+    <div class="live-badge"><span class="live-dot"></span>AR Ativo</div>
+    <button id="exit-btn">✕ Sair</button>
+  </div>
+  <div id="hint">Aponte para o chão ou muro…</div>
+  <div id="panel">
+    <div class="ctrl-card">
+      <p class="card-title">Ajustes da Projeção</p>
+      <div class="row">
+        <div class="lbl">Tamanho<small>escala</small></div>
+        <input type="range" id="s-scale" min="0.1" max="6" step="0.05" value="1">
+        <span class="val" id="v-scale">1.0</span>
+      </div>
+      <div class="row">
+        <div class="lbl">Girar<small>graus</small></div>
+        <input type="range" id="s-rot" min="0" max="360" step="1" value="0">
+        <span class="val" id="v-rot">0°</span>
+      </div>
+      <div class="row">
+        <div class="lbl">Opacidade<small>transparência</small></div>
+        <input type="range" id="s-op" min="0.05" max="1" step="0.05" value="0.7">
+        <span class="val" id="v-op">70%</span>
+      </div>
     </div>
+    <div class="btns-row">
+      <button class="act-btn" id="btn-pin"><span class="ico">📌</span><span id="lbl-pin">Fixar</span></button>
+      <button class="act-btn" id="btn-flip"><span class="ico">↔️</span><span>Espelhar</span></button>
+      <button class="act-btn" id="btn-wall"><span class="ico" id="ico-wall">🧱</span><span id="lbl-wall">Muro</span></button>
+    </div>
+  </div>
 </div>
 
-<!-- ══════════════════════════════════════
-     FALLBACK DESKTOP
-══════════════════════════════════════ -->
-<div id="desktop-fallback">
-    <h2>📱 Abra no celular</h2>
-    <p>AR Projector Pro usa a câmera e sensores do seu dispositivo para projetar imagens em superfícies reais.</p>
-    <div class="qr-note">
-        <p>Acesse este arquivo em um <strong>smartphone Android ou iPhone</strong> com suporte a WebXR AR.</p>
-        <br>
-        <p style="font-size:11px; color: #555;">Chrome (Android) · Safari 16+ (iOS) · Samsung Internet</p>
-    </div>
-    <button class="btn-primary" style="max-width:340px; width:100%; padding:14px;" id="btn-force-ar">
-        Tentar mesmo assim
-    </button>
-</div>
-
-<!-- ══════════════════════════════════════
-     STATUS BAR (AR ativo)
-══════════════════════════════════════ -->
-<div id="ar-status-bar">
-    <div class="status-label">
-        <span class="status-dot"></span>
-        AR Ativo
-    </div>
-    <button class="btn-exit" id="btn-exit-ar">✕ Sair</button>
-</div>
-
-<!-- ══════════════════════════════════════
-     CONTROLES AR (painel inferior)
-══════════════════════════════════════ -->
-<div id="ar-ui">
-    <p id="placement-hint">Mova a câmera para detectar a superfície…</p>
-
-    <div class="controls-panel">
-        <p class="panel-title">Ajustes da Projeção</p>
-
-        <div class="slider-row">
-            <div class="slider-label">
-                Tamanho
-                <small>escala</small>
-            </div>
-            <input type="range" id="scale-slider" min="0.1" max="5" step="0.05" value="1">
-            <span class="slider-val" id="scale-val">1.0</span>
-        </div>
-
-        <div class="slider-row">
-            <div class="slider-label">
-                Girar
-                <small>graus</small>
-            </div>
-            <input type="range" id="rotation-slider" min="0" max="360" step="1" value="0">
-            <span class="slider-val" id="rotation-val">0°</span>
-        </div>
-
-        <div class="slider-row">
-            <div class="slider-label">
-                Opacidade
-                <small>transparência</small>
-            </div>
-            <input type="range" id="opacity-slider" min="0.05" max="1" step="0.05" value="0.75">
-            <span class="slider-val" id="opacity-val">75%</span>
-        </div>
-    </div>
-
-    <div class="actions-row">
-        <button class="action-btn btn-pin" id="pin-btn">
-            <span class="btn-icon">📌</span>
-            <span id="pin-label">Fixar</span>
-        </button>
-        <button class="action-btn btn-flip" id="flip-btn">
-            <span class="btn-icon">↔️</span>
-            <span>Espelhar</span>
-        </button>
-        <button class="action-btn btn-wall" id="wall-btn">
-            <span class="btn-icon">🧱</span>
-            <span id="wall-label">Muro</span>
-        </button>
-    </div>
-</div>
-
-<!-- Reticle visual (mira de posicionamento) -->
-<div id="reticle-hint">
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-        <circle cx="24" cy="24" r="20" stroke="white" stroke-width="1.5" stroke-dasharray="4 4"/>
-        <circle cx="24" cy="24" r="3" fill="white" opacity="0.8"/>
-        <line x1="24" y1="4" x2="24" y2="14" stroke="white" stroke-width="1.5"/>
-        <line x1="24" y1="34" x2="24" y2="44" stroke="white" stroke-width="1.5"/>
-        <line x1="4" y1="24" x2="14" y2="24" stroke="white" stroke-width="1.5"/>
-        <line x1="34" y1="24" x2="44" y2="24" stroke="white" stroke-width="1.5"/>
-    </svg>
-</div>
-
-<!-- Toast -->
 <div id="toast"></div>
 
-<!-- ══════════════════════════════════════
-     CENA A-FRAME
-══════════════════════════════════════ -->
-<a-scene
-    id="ar-scene"
-    webxr="requiredFeatures: hit-test; optionalFeatures: dom-overlay; overlayElement: #ar-ui-wrapper"
-    renderer="antialias: true; alpha: true; colorManagement: true; physicallyCorrectLights: true"
-    vr-mode-ui="enabled: false"
-    style="display:none">
+<div id="no-ar">
+  <h2>📱 AR não disponível</h2>
+  <p>Seu navegador não suporta WebXR AR com hit-test.</p>
+  <div class="info-box">
+    <p>Use <strong>Chrome no Android</strong> (requer ARCore)<br>
+    ou <strong>Safari no iPhone</strong> iOS 16+.<br><br>
+    O arquivo deve estar em <strong>HTTPS</strong>.<br>
+    GitHub Pages, ngrok ou similar funcionam.</p>
+  </div>
+  <button class="btn-back" id="btn-back">← Voltar</button>
+</div>
 
-    <a-camera id="main-camera" position="0 1.6 0" look-controls-enabled="false"></a-camera>
-
-    <!-- Plano da imagem projetada -->
-    <a-plane
-        id="image-plane"
-        visible="false"
-        rotation="-90 0 0"
-        material="shader: flat; transparent: true; opacity: 0.75; side: double; alphaTest: 0.01">
-    </a-plane>
-
-    <!-- Reticle AR (anel no chão) -->
-    <a-entity
-        id="ar-reticle"
-        visible="false"
-        geometry="primitive: ring; radiusInner: 0.04; radiusOuter: 0.065"
-        material="color: #FFD60A; shader: flat; opacity: 0.85"
-        rotation="-90 0 0">
-    </a-entity>
-
-    <a-light type="ambient" color="#ffffff" intensity="1.2"></a-light>
-</a-scene>
-
-
-<!-- ══════════════════════════════════════
-     LÓGICA PRINCIPAL
-══════════════════════════════════════ -->
 <script>
-(function () {
+(function(){
+  // DOM
+  const entry    = document.getElementById('entry');
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput= document.getElementById('file-input');
+  const thumb    = document.getElementById('thumb');
+  const startBtn = document.getElementById('start-btn');
+  const arCanvas = document.getElementById('ar-canvas');
+  const hud      = document.getElementById('hud');
+  const hint     = document.getElementById('hint');
+  const noAr     = document.getElementById('no-ar');
+  const toast    = document.getElementById('toast');
+  const exitBtn  = document.getElementById('exit-btn');
+  const sScale   = document.getElementById('s-scale');
+  const sRot     = document.getElementById('s-rot');
+  const sOp      = document.getElementById('s-op');
+  const vScale   = document.getElementById('v-scale');
+  const vRot     = document.getElementById('v-rot');
+  const vOp      = document.getElementById('v-op');
+  const btnPin   = document.getElementById('btn-pin');
+  const btnFlip  = document.getElementById('btn-flip');
+  const btnWall  = document.getElementById('btn-wall');
 
-    // ── Estado global ──
-    const state = {
-        imageDataUrl: null,
-        imageMimeType: null,
-        imageAspect: 1,
-        isPinned: false,
-        isWallMode: false, // true = vertical (muro), false = horizontal (chão)
-        isFlipped: false,
-        scale: 1,
-        rotation: 0,
-        opacity: 0.75,
-        surfaceDetected: false,
-        arActive: false,
+  // Estado
+  let imageDataUrl=null, imgAspect=1;
+  let isPinned=false, isFlipped=false, isWall=false;
+  let scale=1.0, rotDeg=0, opacity=0.7;
+  let surfaceFound=false;
+  let gl, xrSession, xrRefSpace, xrHitTestSource;
+  let imgTexture=null, prog=null, bufs=null;
+
+  // matrix posição atual da imagem (4x4 col-major)
+  let imgMat=id4();
+
+  // Toast
+  let toastTimer;
+  function showToast(msg,ms=2400){
+    clearTimeout(toastTimer);
+    toast.textContent=msg;
+    toast.classList.add('show');
+    toastTimer=setTimeout(()=>toast.classList.remove('show'),ms);
+  }
+
+  // Carregar imagem
+  dropZone.addEventListener('click',()=>fileInput.click());
+  fileInput.addEventListener('change',()=>{ if(fileInput.files[0]) loadImg(fileInput.files[0]); });
+
+  function loadImg(file){
+    const r=new FileReader();
+    r.onload=e=>{
+      imageDataUrl=e.target.result;
+      const img=new Image();
+      img.onload=()=>{
+        imgAspect=img.width/img.height;
+        thumb.src=imageDataUrl;
+        thumb.style.display='block';
+        startBtn.style.display='flex';
+      };
+      img.src=imageDataUrl;
     };
+    r.readAsDataURL(file);
+  }
 
-    // ── XR internals ──
-    let xrHitTestSource = null;
-    let viewerSpace = null;
-    let refSpace = null;
+  // Iniciar AR
+  startBtn.addEventListener('click',async()=>{
+    if(!imageDataUrl) return;
+    if(!navigator.xr){ showNoAR(); return; }
+    let ok=false;
+    try{ ok=await navigator.xr.isSessionSupported('immersive-ar'); }catch(e){}
+    if(!ok){ showNoAR(); return; }
+    try{
+      // Esta linha abre a câmera nativamente
+      xrSession=await navigator.xr.requestSession('immersive-ar',{
+        requiredFeatures:['hit-test'],
+        optionalFeatures:['dom-overlay'],
+        domOverlay:{root:hud}
+      });
+      initXR();
+    }catch(e){
+      console.error(e);
+      showToast('Erro: '+e.message, 4000);
+    }
+  });
 
-    // ── Elementos ──
-    const entryScreen    = document.getElementById('entry-screen');
-    const previewOverlay = document.getElementById('preview-overlay');
-    const desktopFallback= document.getElementById('desktop-fallback');
-    const arStatusBar    = document.getElementById('ar-status-bar');
-    const arUI           = document.getElementById('ar-ui');
-    const arScene        = document.getElementById('ar-scene');
-    const fileInput      = document.getElementById('file-input');
-    const dropZone       = document.getElementById('drop-zone');
-    const thumb          = document.getElementById('thumb');
-    const startBtn       = document.getElementById('start-btn');
-    const previewImg     = document.getElementById('preview-img');
-    const placementHint  = document.getElementById('placement-hint');
-    const reticleHint    = document.getElementById('reticle-hint');
-    const toast          = document.getElementById('toast');
+  function showNoAR(){ noAr.style.display='flex'; entry.style.display='none'; }
+  document.getElementById('btn-back').addEventListener('click',()=>{ noAr.style.display='none'; entry.style.display='flex'; });
 
-    const imagePlane  = document.getElementById('image-plane');
-    const arReticle   = document.getElementById('ar-reticle');
+  async function initXR(){
+    entry.style.display='none';
 
-    const scaleSlider    = document.getElementById('scale-slider');
-    const rotationSlider = document.getElementById('rotation-slider');
-    const opacitySlider  = document.getElementById('opacity-slider');
+    // WebGL context compatível com XR
+    gl=arCanvas.getContext('webgl2',{xrCompatible:true})
+      || arCanvas.getContext('webgl',{xrCompatible:true});
+    await gl.makeXRCompatible();
 
-    const scaleVal    = document.getElementById('scale-val');
-    const rotationVal = document.getElementById('rotation-val');
-    const opacityVal  = document.getElementById('opacity-val');
+    // Shaders
+    const vs=`
+      attribute vec4 aPos;
+      attribute vec2 aUV;
+      uniform mat4 uMVP;
+      uniform float uFlip;
+      varying vec2 vUV;
+      void main(){
+        gl_Position=uMVP*aPos;
+        vUV=vec2(uFlip>0.5?1.0-aUV.x:aUV.x, aUV.y);
+      }`;
+    const fs=`
+      precision mediump float;
+      varying vec2 vUV;
+      uniform sampler2D uTex;
+      uniform float uOp;
+      void main(){
+        vec4 c=texture2D(uTex,vUV);
+        gl_FragColor=vec4(c.rgb,c.a*uOp);
+      }`;
 
-    const pinBtn   = document.getElementById('pin-btn');
-    const flipBtn  = document.getElementById('flip-btn');
-    const wallBtn  = document.getElementById('wall-btn');
+    prog=mkProg(gl,vs,fs);
 
-    // ── Toast helper ──
-    function showToast(msg, duration = 2200) {
-        toast.textContent = msg;
-        toast.classList.add('show');
-        setTimeout(() => toast.classList.remove('show'), duration);
+    // Quad plano: pos(3)+uv(2), deitado em XZ
+    const verts=new Float32Array([
+      -0.5,0,-0.5, 0,1,
+       0.5,0,-0.5, 1,1,
+       0.5,0, 0.5, 1,0,
+      -0.5,0, 0.5, 0,0
+    ]);
+    const idxs=new Uint16Array([0,1,2,0,2,3]);
+    const vb=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,vb); gl.bufferData(gl.ARRAY_BUFFER,verts,gl.STATIC_DRAW);
+    const ib=gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,idxs,gl.STATIC_DRAW);
+    bufs={vb,ib};
+
+    // Textura
+    imgTexture=gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D,imgTexture);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    const img=new Image();
+    img.onload=()=>{ gl.bindTexture(gl.TEXTURE_2D,imgTexture); gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,img); };
+    img.src=imageDataUrl;
+
+    // XR Layer e spaces
+    const layer=new XRWebGLLayer(xrSession,gl);
+    xrSession.updateRenderState({baseLayer:layer});
+    xrRefSpace=await xrSession.requestReferenceSpace('local');
+    const viewerSpace=await xrSession.requestReferenceSpace('viewer');
+    xrHitTestSource=await xrSession.requestHitTestSource({space:viewerSpace});
+
+    arCanvas.style.display='block';
+    hud.style.display='block';
+    xrSession.addEventListener('end',onEnd);
+    xrSession.requestAnimationFrame(onFrame);
+  }
+
+  function onFrame(t,frame){
+    xrSession.requestAnimationFrame(onFrame);
+    const layer=xrSession.renderState.baseLayer;
+    const pose=frame.getViewerPose(xrRefSpace);
+    if(!pose) return;
+
+    // Hit test
+    const hits=frame.getHitTestResults(xrHitTestSource);
+    if(hits.length>0 && !isPinned){
+      const hp=hits[0].getPose(xrRefSpace);
+      fromPose(imgMat, hp.transform.position, hp.transform.orientation);
+      if(!surfaceFound){
+        surfaceFound=true;
+        hint.textContent='Superfície detectada — toque em Fixar para travar';
+      }
     }
 
-    // ── Detectar se WebXR AR é suportado ──
-    async function checkARSupport() {
-        if (!navigator.xr) return false;
-        try {
-            return await navigator.xr.isSessionSupported('immersive-ar');
-        } catch { return false; }
+    // Render
+    gl.bindFramebuffer(gl.FRAMEBUFFER,layer.framebuffer);
+    gl.clearColor(0,0,0,0);
+    gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+
+    for(const view of pose.views){
+      const vp=layer.getViewport(view);
+      gl.viewport(vp.x,vp.y,vp.width,vp.height);
+      const mvp=mul4(mul4(view.projectionMatrix, view.transform.inverse.matrix), buildModel());
+      draw(mvp);
     }
+  }
 
-    // ── Carregar imagem ──
-    dropZone.addEventListener('click', () => fileInput.click());
-    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-    dropZone.addEventListener('drop', e => {
-        e.preventDefault();
-        dropZone.classList.remove('drag-over');
-        const file = e.dataTransfer.files[0];
-        if (file && file.type.startsWith('image/')) loadFile(file);
-    });
+  function buildModel(){
+    // Escala (aspecto real da imagem)
+    const sx=scale*imgAspect, sy=scale, sz=scale;
+    const S=mScale(sx,sy,sz);
+    // Rotação
+    const rotR=rotDeg*Math.PI/180;
+    const R=isWall ? mRotZ(rotR) : mRotY(rotR);
+    // Modo muro: inclina o plano para ficar vertical
+    const W=isWall ? mRotX(-Math.PI/2) : id4();
+    // base * W * R * S
+    return mul4(mul4(mul4(new Float32Array(imgMat), W), R), S);
+  }
 
-    fileInput.addEventListener('change', () => {
-        if (fileInput.files[0]) loadFile(fileInput.files[0]);
-    });
+  function draw(mvp){
+    gl.useProgram(prog.p);
+    gl.bindBuffer(gl.ARRAY_BUFFER,bufs.vb);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,bufs.ib);
+    const stride=5*4;
+    gl.enableVertexAttribArray(prog.aPos);
+    gl.vertexAttribPointer(prog.aPos,3,gl.FLOAT,false,stride,0);
+    gl.enableVertexAttribArray(prog.aUV);
+    gl.vertexAttribPointer(prog.aUV,2,gl.FLOAT,false,stride,12);
+    gl.uniformMatrix4fv(prog.uMVP,false,mvp);
+    gl.uniform1f(prog.uOp,opacity);
+    gl.uniform1f(prog.uFlip,isFlipped?1:0);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D,imgTexture);
+    gl.uniform1i(prog.uTex,0);
+    gl.drawElements(gl.TRIANGLES,6,gl.UNSIGNED_SHORT,0);
+  }
 
-    function loadFile(file) {
-        state.imageMimeType = file.type;
-        const reader = new FileReader();
-        reader.onload = e => {
-            state.imageDataUrl = e.target.result;
-            const img = new Image();
-            img.onload = () => {
-                state.imageAspect = img.width / img.height;
-                thumb.src = state.imageDataUrl;
-                thumb.classList.add('visible');
-                previewImg.src = state.imageDataUrl;
-                startBtn.classList.add('visible');
-            };
-            img.src = state.imageDataUrl;
-        };
-        reader.readAsDataURL(file);
+  function onEnd(){
+    arCanvas.style.display='none';
+    hud.style.display='none';
+    entry.style.display='flex';
+    surfaceFound=false; isPinned=false;
+    hint.textContent='Aponte para o chão ou muro…';
+    btnPin.classList.remove('on');
+    document.getElementById('lbl-pin').textContent='Fixar';
+    xrSession=null;
+  }
+
+  exitBtn.addEventListener('click',()=>{ if(xrSession) xrSession.end(); });
+
+  // Sliders
+  sScale.addEventListener('input',e=>{ scale=parseFloat(e.target.value); vScale.textContent=scale.toFixed(1); });
+  sRot.addEventListener('input',e=>{ rotDeg=parseInt(e.target.value); vRot.textContent=rotDeg+'°'; });
+  sOp.addEventListener('input',e=>{ opacity=parseFloat(e.target.value); vOp.textContent=Math.round(opacity*100)+'%'; });
+
+  btnPin.addEventListener('click',()=>{
+    isPinned=!isPinned;
+    btnPin.classList.toggle('on',isPinned);
+    document.getElementById('lbl-pin').textContent=isPinned?'Soltar':'Fixar';
+    hint.textContent=isPinned?'📌 Fixado! Pode pintar.':'Mova para reposicionar…';
+    showToast(isPinned?'Imagem fixada — pode pintar!':'Imagem liberada.');
+  });
+
+  btnFlip.addEventListener('click',()=>{
+    isFlipped=!isFlipped;
+    btnFlip.classList.toggle('on',isFlipped);
+    showToast(isFlipped?'Espelho ativado.':'Espelho removido.');
+  });
+
+  btnWall.addEventListener('click',()=>{
+    isWall=!isWall;
+    btnWall.classList.toggle('on-green',isWall);
+    document.getElementById('lbl-wall').textContent=isWall?'Chão':'Muro';
+    document.getElementById('ico-wall').textContent=isWall?'🏠':'🧱';
+    showToast(isWall?'Modo Muro: aponte para uma parede.':'Modo Chão: aponte para o chão.');
+  });
+
+  // ── Math helpers ──
+  function id4(){ const m=new Float32Array(16); m[0]=m[5]=m[10]=m[15]=1; return m; }
+
+  function fromPose(out, pos, ori){
+    const {x:qx,y:qy,z:qz,w:qw}=ori, {x,y,z}=pos;
+    out[0]=1-2*(qy*qy+qz*qz); out[1]=2*(qx*qy+qz*qw); out[2]=2*(qx*qz-qy*qw); out[3]=0;
+    out[4]=2*(qx*qy-qz*qw); out[5]=1-2*(qx*qx+qz*qz); out[6]=2*(qy*qz+qx*qw); out[7]=0;
+    out[8]=2*(qx*qz+qy*qw); out[9]=2*(qy*qz-qx*qw); out[10]=1-2*(qx*qx+qy*qy); out[11]=0;
+    out[12]=x; out[13]=y; out[14]=z; out[15]=1;
+  }
+
+  function mul4(a,b){
+    const r=new Float32Array(16);
+    for(let i=0;i<4;i++) for(let j=0;j<4;j++){
+      let s=0; for(let k=0;k<4;k++) s+=a[i+k*4]*b[k+j*4]; r[i+j*4]=s;
     }
+    return r;
+  }
 
-    // ── Botão Iniciar ──
-    startBtn.addEventListener('click', async () => {
-        if (!state.imageDataUrl) return;
-        const supported = await checkARSupport();
-        if (supported) {
-            entryScreen.style.display = 'none';
-            previewOverlay.classList.add('active');
-        } else {
-            // Tenta mesmo assim — pode funcionar em alguns navegadores
-            entryScreen.style.display = 'none';
-            desktopFallback.classList.add('active');
-        }
-    });
+  function mScale(sx,sy,sz){ const m=id4(); m[0]=sx; m[5]=sy; m[10]=sz; return m; }
+  function mRotY(a){ const m=id4(),c=Math.cos(a),s=Math.sin(a); m[0]=c;m[8]=s;m[2]=-s;m[10]=c; return m; }
+  function mRotX(a){ const m=id4(),c=Math.cos(a),s=Math.sin(a); m[5]=c;m[6]=s;m[9]=-s;m[10]=c; return m; }
+  function mRotZ(a){ const m=id4(),c=Math.cos(a),s=Math.sin(a); m[0]=c;m[1]=s;m[4]=-s;m[5]=c; return m; }
 
-    document.getElementById('btn-back-preview').addEventListener('click', () => {
-        previewOverlay.classList.remove('active');
-        entryScreen.style.display = 'flex';
-    });
-
-    document.getElementById('btn-force-ar').addEventListener('click', () => {
-        desktopFallback.classList.remove('active');
-        previewOverlay.classList.add('active');
-    });
-
-    document.getElementById('btn-enter-ar').addEventListener('click', () => {
-        previewOverlay.classList.remove('active');
-        launchAR();
-    });
-
-    document.getElementById('btn-exit-ar').addEventListener('click', () => {
-        const scene = document.querySelector('a-scene');
-        if (scene && scene.is('ar-mode')) scene.exitAR ? scene.exitAR() : scene.exitVR();
-        teardownAR();
-    });
-
-    // ── Lançar AR ──
-    function launchAR() {
-        // Monta a textura no plano antes de entrar
-        applyTexture();
-
-        arScene.style.display = 'block';
-
-        // Pequeno delay para A-Frame inicializar
-        setTimeout(() => {
-            const scene = document.querySelector('a-scene');
-            if (scene.hasLoaded) {
-                enterARSession(scene);
-            } else {
-                scene.addEventListener('loaded', () => enterARSession(scene), { once: true });
-            }
-        }, 100);
-    }
-
-    function enterARSession(scene) {
-        // Aciona o botão de AR do A-Frame programaticamente
-        const vrBtn = document.querySelector('.a-enter-vr-button');
-        if (vrBtn) vrBtn.click();
-
-        scene.addEventListener('enter-vr', () => {
-            if (scene.is('ar-mode')) {
-                state.arActive = true;
-                arStatusBar.classList.add('active');
-                arUI.classList.add('active');
-                reticleHint.style.display = 'block';
-                setupHitTest(scene);
-            }
-        }, { once: true });
-
-        scene.addEventListener('exit-vr', teardownAR, { once: true });
-    }
-
-    async function setupHitTest(scene) {
-        const session = scene.renderer.xr.getSession();
-        if (!session) return;
-        try {
-            viewerSpace = await session.requestReferenceSpace('viewer');
-            xrHitTestSource = await session.requestHitTestSource({ space: viewerSpace });
-            refSpace = await session.requestReferenceSpace('local');
-        } catch (e) {
-            showToast('Hit-test não disponível neste dispositivo');
-        }
-    }
-
-    function teardownAR() {
-        state.arActive = false;
-        state.isPinned = false;
-        xrHitTestSource = null;
-        arStatusBar.classList.remove('active');
-        arUI.classList.remove('active');
-        reticleHint.style.display = 'none';
-        arScene.style.display = 'none';
-        imagePlane.setAttribute('visible', 'false');
-        arReticle.setAttribute('visible', 'false');
-        // Volta à tela de entrada
-        entryScreen.style.display = 'flex';
-    }
-
-    // ── Aplicar textura no plano ──
-    function applyTexture() {
-        const h = 0.5; // altura base: 50cm
-        const w = h * state.imageAspect;
-        imagePlane.setAttribute('height', h.toFixed(3));
-        imagePlane.setAttribute('width', w.toFixed(3));
-        imagePlane.setAttribute('material', {
-            src: state.imageDataUrl,
-            transparent: true,
-            opacity: state.opacity,
-            side: 'double',
-            shader: 'flat',
-            alphaTest: 0.01,
-            repeat: state.isFlipped ? '-1 1' : '1 1',
-            offset: state.isFlipped ? '1 0' : '0 0',
-        });
-        applyTransform();
-    }
-
-    // ── Aplicar transformações ──
-    function applyTransform() {
-        const s = state.scale;
-        imagePlane.setAttribute('scale', `${s} ${s} ${s}`);
-
-        const baseRotX = state.isWallMode ? '0' : '-90';
-        imagePlane.setAttribute('rotation', `${baseRotX} 0 ${state.rotation}`);
-
-        imagePlane.setAttribute('material', 'opacity', state.opacity);
-    }
-
-    // ── Sliders ──
-    scaleSlider.addEventListener('input', e => {
-        state.scale = parseFloat(e.target.value);
-        scaleVal.textContent = state.scale.toFixed(1);
-        applyTransform();
-    });
-
-    rotationSlider.addEventListener('input', e => {
-        state.rotation = parseInt(e.target.value);
-        rotationVal.textContent = state.rotation + '°';
-        applyTransform();
-    });
-
-    opacitySlider.addEventListener('input', e => {
-        state.opacity = parseFloat(e.target.value);
-        opacityVal.textContent = Math.round(state.opacity * 100) + '%';
-        imagePlane.setAttribute('material', 'opacity', state.opacity);
-    });
-
-    // ── Botão Fixar ──
-    pinBtn.addEventListener('click', () => {
-        state.isPinned = !state.isPinned;
-        pinBtn.classList.toggle('pinned', state.isPinned);
-        document.getElementById('pin-label').textContent = state.isPinned ? 'Soltar' : 'Fixar';
-        placementHint.textContent = state.isPinned
-            ? '📌 Imagem fixada — pode pintar!'
-            : 'Mova a câmera para reposicionar…';
-        showToast(state.isPinned ? 'Imagem fixada! Pode pintar.' : 'Imagem liberada para mover.');
-    });
-
-    // ── Botão Espelhar ──
-    flipBtn.addEventListener('click', () => {
-        state.isFlipped = !state.isFlipped;
-        applyTexture();
-        showToast(state.isFlipped ? 'Imagem espelhada.' : 'Espelho removido.');
-    });
-
-    // ── Botão Muro/Chão ──
-    wallBtn.addEventListener('click', () => {
-        state.isWallMode = !state.isWallMode;
-        wallBtn.classList.toggle('active', state.isWallMode);
-        document.getElementById('wall-label').textContent = state.isWallMode ? 'Chão' : 'Muro';
-        wallBtn.querySelector('.btn-icon').textContent = state.isWallMode ? '🏠' : '🧱';
-        applyTransform();
-        showToast(state.isWallMode
-            ? 'Modo Muro: aponte para uma parede.'
-            : 'Modo Chão: aponte para o chão.');
-    });
-
-    // ── Tick: hit-test loop via A-Frame ──
-    AFRAME.registerComponent('ar-tick-controller', {
-        tick: function () {
-            if (!state.arActive) return;
-            const scene = this.el.sceneEl;
-            if (!scene.is('ar-mode')) return;
-
-            const frame = scene.frame;
-            if (!frame || !xrHitTestSource || !refSpace) return;
-
-            const results = frame.getHitTestResults(xrHitTestSource);
-
-            if (results.length > 0) {
-                const pose = results[0].getPose(refSpace);
-                const p = pose.transform.position;
-
-                // Reticle
-                arReticle.setAttribute('visible', 'true');
-                arReticle.setAttribute('position', { x: p.x, y: p.y, z: p.z });
-
-                // Imagem: só segue se não estiver fixada
-                if (!state.isPinned) {
-                    imagePlane.setAttribute('visible', 'true');
-                    imagePlane.setAttribute('position', { x: p.x, y: p.y, z: p.z });
-                    if (!state.surfaceDetected) {
-                        state.surfaceDetected = true;
-                        placementHint.textContent = 'Superfície detectada! Toque em Fixar quando estiver certo.';
-                    }
-                }
-            } else {
-                arReticle.setAttribute('visible', 'false');
-                if (!state.isPinned) {
-                    imagePlane.setAttribute('visible', 'false');
-                    state.surfaceDetected = false;
-                    placementHint.textContent = 'Mova a câmera para detectar a superfície…';
-                }
-            }
-        }
-    });
-
-    // Adiciona o componente tick à câmera
-    document.querySelector('a-scene').setAttribute('ar-tick-controller', '');
-
+  function mkProg(gl,vs,fs){
+    function sh(t,src){const s=gl.createShader(t);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))console.error(gl.getShaderInfoLog(s));return s;}
+    const p=gl.createProgram();
+    gl.attachShader(p,sh(gl.VERTEX_SHADER,vs));
+    gl.attachShader(p,sh(gl.FRAGMENT_SHADER,fs));
+    gl.linkProgram(p);
+    return{p,aPos:gl.getAttribLocation(p,'aPos'),aUV:gl.getAttribLocation(p,'aUV'),uMVP:gl.getUniformLocation(p,'uMVP'),uTex:gl.getUniformLocation(p,'uTex'),uOp:gl.getUniformLocation(p,'uOp'),uFlip:gl.getUniformLocation(p,'uFlip')};
+  }
 })();
 </script>
-
 </body>
 </html>
